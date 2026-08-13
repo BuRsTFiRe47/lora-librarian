@@ -1,0 +1,18 @@
+# Byte-compiled / build
+__pycache__/
+*.py[cod]
+build/
+dist/
+*.spec
+
+# App-generated files (kişisel ayarlar / personal settings)
+ayarlar.json
+hash_cache.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Virtual env
+.venv/
+venv/
