@@ -464,6 +464,24 @@ class LoraLibrarianApp(ctk.CTk):
             self.hash_cache[filepath] = {"mtime": stat.st_mtime, "size": stat.st_size, "hash": digest}
         return digest
 
+    def _resim_uzantisi_belirle(self, content_type, url):
+        """Decide the correct file extension for a downloaded cover image
+        based on its real Content-Type (falls back to the URL's own
+        extension), instead of blindly writing every download as .png -
+        which produced unreadable files whenever the actual image was a
+        JPEG/WEBP or the download itself failed."""
+        content_type = (content_type or "").lower()
+        if "jpeg" in content_type or "jpg" in content_type:
+            return ".jpg"
+        if "webp" in content_type:
+            return ".webp"
+        if "png" in content_type:
+            return ".png"
+        url_ext = os.path.splitext(url.split("?")[0])[1].lower()
+        if url_ext in (".jpg", ".jpeg", ".png", ".webp"):
+            return url_ext
+        return ".jpg"
+
     def dosya_temizle_adi(self, isim):
         for c in ['/', '\\', ':', '*', '?', '"', '<', '>', '|']:
             isim = isim.replace(c, "_")
@@ -605,7 +623,7 @@ class LoraLibrarianApp(ctk.CTk):
             base_adi = os.path.splitext(file)[0]
             self.log_yaz(t("log_model", self.lang, file=file))
 
-            resim_var = any(os.path.exists(os.path.join(root, base_adi + ext)) for ext in [".png", ".jpg"])
+            resim_var = any(os.path.exists(os.path.join(root, base_adi + ext)) for ext in [".png", ".jpg", ".jpeg", ".webp"])
             json_var = any(os.path.exists(os.path.join(root, base_adi + ext)) for ext in [".json", ".civitai.info"])
 
             m_id, t_taban_raw, t_yaratici = None, None, unknown_creator
@@ -711,12 +729,17 @@ class LoraLibrarianApp(ctk.CTk):
             elif mod in ["checkpoint", "lora"]:
                 if config["resim"] and not resim_var and model_verisi and model_verisi.get("images"):
                     try:
-                        r_img = self.session.get(model_verisi["images"][0]["url"], timeout=10).content
-                        with open(os.path.join(root, base_adi + ".png"), "wb") as f:
-                            f.write(r_img)
-                        self.log_yaz(t("log_cover_downloaded", self.lang))
+                        img_url = model_verisi["images"][0]["url"]
+                        r_img = self.session.get(img_url, timeout=15)
+                        if r_img.status_code == 200 and r_img.content:
+                            ext = self._resim_uzantisi_belirle(r_img.headers.get("Content-Type", ""), img_url)
+                            with open(os.path.join(root, base_adi + ext), "wb") as f:
+                                f.write(r_img.content)
+                            self.log_yaz(t("log_cover_downloaded", self.lang))
+                        else:
+                            self.log_yaz(t("log_cover_failed", self.lang))
                     except Exception:
-                        pass
+                        self.log_yaz(t("log_cover_failed", self.lang))
 
                 yol_parcalari = [kaynak]
                 if config["taban"] and t_taban != unknown_base:
