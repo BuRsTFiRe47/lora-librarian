@@ -31,6 +31,12 @@ from base_models import normalize_base_model
 APP_VERSION = "2.0.0"
 API_DOMAIN = "civitai.red"
 
+# Native display names shown on the language switcher - shown in each
+# language's own script so they're recognizable regardless of which
+# language the UI is currently in.
+LANG_CODES = ["tr", "en", "ja", "zh"]
+LANG_LABELS = {"tr": "Türkçe", "en": "English", "ja": "日本語", "zh": "中文"}
+
 CONFLICT_CODES = ["rename", "skip", "overwrite"]
 CONFLICT_KEYS = {"rename": "conflict_rename", "skip": "conflict_skip", "overwrite": "conflict_overwrite"}
 
@@ -130,9 +136,9 @@ class LoraLibrarianApp(ctk.CTk):
         self.theme_seg.set(current_theme_display)
         self.theme_seg.pack(side="right", padx=(10, 0))
 
-        lang_values = [t("lang_tr", self.lang), t("lang_en", self.lang)]
+        lang_values = [LANG_LABELS[c] for c in LANG_CODES]
         self.lang_seg = ctk.CTkSegmentedButton(controls_frame, values=lang_values, command=self._on_lang_change)
-        self.lang_seg.set(t("lang_tr", self.lang) if self.lang == "tr" else t("lang_en", self.lang))
+        self.lang_seg.set(LANG_LABELS.get(self.lang, LANG_LABELS["tr"]))
         self.lang_seg.pack(side="right")
 
         self.sekme = ctk.CTkTabview(self)
@@ -167,7 +173,10 @@ class LoraLibrarianApp(ctk.CTk):
         self.log_yaz(t("log_ready", self.lang))
 
     def _on_lang_change(self, value):
-        self.lang = "tr" if value == t("lang_tr", self.lang) else "en"
+        for code, label in LANG_LABELS.items():
+            if label == value:
+                self.lang = code
+                break
         self._creator_text_cp = self.metin_kutusunu_oku(self.cp_yaratici_kutu) if hasattr(self, "cp_yaratici_kutu") else self._creator_text_cp
         self._creator_text_lr = self.metin_kutusunu_oku(self.lr_yaratici_kutu) if hasattr(self, "lr_yaratici_kutu") else self._creator_text_lr
         self.arayuz_ciz()
