@@ -33,6 +33,7 @@ TRANSLATIONS = {
     "tab_checkpoint": {"tr": "🏰 Checkpoint Düzenle", "en": "🏰 Edit Checkpoints", "ja": "🏰 チェックポイント整理", "zh": "🏰 整理 Checkpoint"},
     "tab_lora": {"tr": "🎨 LoRA Düzenle", "en": "🎨 Edit LoRAs", "ja": "🎨 LoRA整理", "zh": "🎨 整理 LoRA"},
     "tab_clean": {"tr": "🧹 Akıllı Temizlik", "en": "🧹 Smart Cleanup", "ja": "🧹 スマートクリーンアップ", "zh": "🧹 智能清理"},
+    "tab_rename": {"tr": "🏷️ İsim & Trigger", "en": "🏷️ Rename & Triggers", "ja": "🏷️ 名前とトリガー", "zh": "🏷️ 重命名与触发词"},
 
     # Path pickers
     "folder_checkpoint": {"tr": "Düzenlenecek Checkpoint Klasörü:", "en": "Checkpoint Folder to Organize:", "ja": "整理するチェックポイントフォルダ：", "zh": "要整理的 Checkpoint 文件夹："},
@@ -64,6 +65,34 @@ TRANSLATIONS = {
     "switch_low_rating": {"tr": "Düşük Puanlıları Çöpe Taşı", "en": "Move Low-Rated Models to Trash", "ja": "低評価のモデルをゴミ箱へ移動", "zh": "将低评分模型移至回收站"},
     "min_rating_label": {"tr": "Min Puan:", "en": "Min Rating:", "ja": "最低評価：", "zh": "最低评分："},
     "conflict_trash_label": {"tr": "Çöp Klasöründe Çakışma Olursa:", "en": "If a Conflict Occurs in the Trash Folder:", "ja": "ゴミ箱フォルダで競合が発生した場合：", "zh": "如果回收站文件夹中发生冲突："},
+
+    # Rename & Trigger tab
+    "rename_info_text": {
+        "tr": "Civitai'den model adını çekip LoRA dosyasını ve aynı isimdeki tüm ilişkili dosyaları (.civitai.info, önizleme görselleri, .json vb.) yeni isme çevirir. Eksik trigger word'leri de Civitai verisinden ya da örnek görsellerin komutlarından (sadece ilgili kelimeleri, tüm komutu değil) çıkarıp kaydeder.",
+        "en": "Fetches the model's title from Civitai and renames the LoRA file plus every related file sharing its name (.civitai.info, preview images, .json, etc.). Also fills in missing trigger words from Civitai's data or from sample-image prompts (only the relevant keywords, not the full prompt).",
+        "ja": "Civitaiからモデル名を取得し、LoRAファイルと同名のすべての関連ファイル（.civitai.info、プレビュー画像、.jsonなど）の名前を変更します。トリガーワードが不足している場合は、Civitaiのデータまたはサンプル画像のプロンプト（プロンプト全体ではなく関連するキーワードのみ）から抽出して保存します。",
+        "zh": "从 Civitai 获取模型名称，并重命名 LoRA 文件及所有同名的相关文件（.civitai.info、预览图片、.json 等）。同时会从 Civitai 数据或示例图片的提示词中（仅提取相关关键词，而非完整提示词）补全缺失的触发词。",
+    },
+    "rename_mode_label": {"tr": "Yeniden Adlandırma Modu:", "en": "Rename Mode:", "ja": "リネームモード：", "zh": "重命名模式："},
+    "rename_mode_meaningless": {"tr": "Sadece Anlamsız İsimler", "en": "Meaningless Names Only", "ja": "意味のない名前のみ", "zh": "仅无意义的文件名"},
+    "rename_mode_all": {"tr": "Civitai Adından Farklı Olan Tümü", "en": "All That Differ From Civitai Title", "ja": "Civitaiのタイトルと異なるすべて", "zh": "所有与 Civitai 标题不同的文件"},
+    "switch_fill_trigger": {"tr": "Eksik Trigger Word'leri Doldur (Civitai/örnek görsellerden)", "en": "Fill Missing Trigger Words (from Civitai / sample images)", "ja": "不足しているトリガーワードを補完（Civitai／サンプル画像から）", "zh": "补全缺失的触发词（来自 Civitai／示例图片）"},
+    "btn_start_rename": {"tr": "▶ Yeniden Adlandır & Trigger Doldur", "en": "▶ Rename & Fill Triggers", "ja": "▶ リネーム＆トリガー補完を開始", "zh": "▶ 开始重命名并填充触发词"},
+
+    "log_rename_meaningless_skip": {"tr": "   [Atlandı] İsim zaten anlamlı görünüyor.", "en": "   [Skipped] Name already looks meaningful.", "ja": "   [スキップ] 名前は既に意味があるようです。", "zh": "   [已跳过] 文件名看起来已经有意义。"},
+    "log_renamed_files": {"tr": "   [🏷️] Yeniden adlandırıldı: {old} -> {new}", "en": "   [🏷️] Renamed: {old} -> {new}", "ja": "   [🏷️] 名前変更：{old} -> {new}", "zh": "   [🏷️] 已重命名：{old} -> {new}"},
+    "log_trigger_from_api": {"tr": "   [🔑] Trigger word(ler) Civitai'den alındı: {words}", "en": "   [🔑] Trigger word(s) fetched from Civitai: {words}", "ja": "   [🔑] Civitaiからトリガーワードを取得：{words}", "zh": "   [🔑] 已从 Civitai 获取触发词：{words}"},
+    "log_trigger_extracted": {"tr": "   [🔑] Örnek görsellerden çıkarıldı: {words}", "en": "   [🔑] Extracted from sample images: {words}", "ja": "   [🔑] サンプル画像から抽出：{words}", "zh": "   [🔑] 已从示例图片中提取：{words}"},
+    "log_trigger_none_found": {"tr": "   [–] Trigger word bulunamadı (örnek görsel/veri yetersiz).", "en": "   [–] No trigger word could be found (insufficient sample data).", "ja": "   [–] トリガーワードが見つかりませんでした（サンプルデータ不足）。", "zh": "   [–] 未能找到触发词（示例数据不足）。"},
+    "log_trigger_already": {"tr": "   [–] Trigger word zaten mevcut, atlandı.", "en": "   [–] Trigger word already present, skipped.", "ja": "   [–] トリガーワードは既に存在するためスキップしました。", "zh": "   [–] 触发词已存在，已跳过。"},
+    "log_no_metadata": {"tr": "   [!] Civitai verisi bulunamadı, atlandı.", "en": "   [!] No Civitai data found, skipped.", "ja": "   [!] Civitaiのデータが見つからないためスキップしました。", "zh": "   [!] 未找到 Civitai 数据，已跳过。"},
+
+    "summary_text_rename": {
+        "tr": "✅ İşlem Başarıyla Tamamlandı!\n\n🏷️ Yeniden Adlandırılan Model: {renamed}\n🔑 Trigger Word Dolduruldu: {triggers}",
+        "en": "✅ Operation Completed Successfully!\n\n🏷️ Models Renamed: {renamed}\n🔑 Trigger Words Filled: {triggers}",
+        "ja": "✅ 処理が正常に完了しました！\n\n🏷️ 名前変更されたモデル数：{renamed}\n🔑 トリガーワードを補完した数：{triggers}",
+        "zh": "✅ 操作已成功完成！\n\n🏷️ 已重命名的模型数：{renamed}\n🔑 已补全触发词的数量：{triggers}",
+    },
 
     # Log / status
     "status_label_prefix": {"tr": "Canlı İşlem Kaydı - Durum:", "en": "Live Process Log - Status:", "ja": "リアルタイム処理ログ - 状態：", "zh": "实时处理日志 - 状态："},

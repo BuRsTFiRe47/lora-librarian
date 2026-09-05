@@ -14,6 +14,7 @@ License: MIT
 """
 
 import os
+import re
 import sys
 import hashlib
 import shutil
@@ -23,6 +24,7 @@ import threading
 
 import requests
 import customtkinter as ctk
+import tkinter as tk
 from tkinter import filedialog, messagebox
 
 from lang import t
@@ -43,10 +45,76 @@ CONFLICT_KEYS = {"rename": "conflict_rename", "skip": "conflict_skip", "overwrit
 CREATOR_CODES = ["off", "all", "list"]
 CREATOR_KEYS = {"off": "creator_mode_off", "all": "creator_mode_all", "list": "creator_mode_list"}
 
-# Theme-aware color tuples: (light_mode, dark_mode)
-ACCENT = ("#0a7d63", "#00ffcc")
-LOG_BG = ("#f2f2f2", "#121212")
-CARD_BG = ("#e8e8e8", "#2b2b2b")
+RENAME_MODE_CODES = ["meaningless", "all"]
+RENAME_MODE_KEYS = {"meaningless": "rename_mode_meaningless", "all": "rename_mode_all"}
+
+# Filenames that look like a hash / auto-generated ID rather than an
+# actual model title - candidates for renaming when "meaningless only"
+# mode is selected.
+_MEANINGLESS_PATTERNS = [
+    re.compile(r"^[0-9a-fA-F]{6,}$"),                       # hex hash
+    re.compile(r"^\d+$"),                                    # pure number
+    re.compile(r"(?i)^(lora|model|checkpoint|download|file|untitled|new\s*folder)[\s_-]*\d*$"),
+]
+
+
+def is_meaningless_name(name: str) -> bool:
+    name = name.strip()
+    return any(p.match(name) for p in _MEANINGLESS_PATTERNS)
+
+# Theme-aware color tuples: (light_mode, dark_mode) - a dark violet /
+# near-black palette with a purple-to-pink accent, plus a matching
+# light-mode equivalent.
+BG_MAIN = ("#f4f2fa", "#0e0d15")
+BG_HEADER = ("#ffffff", "#131220")
+CARD_BG = ("#ffffff", "#17161f")
+SIDEBAR_BG = ("#ede9f7", "#121120")
+SIDEBAR_ITEM_HOVER = ("#e0d9f5", "#1e1c2c")
+SIDEBAR_TEXT = ("#3a3650", "#c9c6d9")
+BORDER = ("#e2ddf0", "#2a2838")
+LOG_BG = ("#efecf8", "#100f18")
+TEXT_MUTED = ("#6b6880", "#9c99ab")
+
+ACCENT = "#8b5cf6"       # violet - sidebar selection, focus highlights
+ACCENT_HOVER = "#7c4ee8"
+GRADIENT_STOPS = ["#4f46e5", "#9333ea", "#ec4899"]  # indigo -> violet -> pink
+
+CORNER_BTN = 10
+CORNER_CARD = 14
+CORNER_INPUT = 8
+
+
+def _hex_to_rgb(h):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def _rgb_to_hex(rgb):
+    return "#%02x%02x%02x" % rgb
+
+
+def _interp_color(stops, t_frac):
+    """Interpolate a color along a multi-stop gradient (t_frac in [0,1])."""
+    n = len(stops) - 1
+    seg = min(int(t_frac * n), n - 1)
+    local_t = (t_frac * n) - seg
+    c1, c2 = _hex_to_rgb(stops[seg]), _hex_to_rgb(stops[seg + 1])
+    mixed = tuple(int(c1[i] + (c2[i] - c1[i]) * local_t) for i in range(3))
+    return _rgb_to_hex(mixed)
+
+
+def draw_gradient_bar(canvas, width, height, stops=None):
+    """Paint a thin horizontal gradient strip on a tk.Canvas - the
+    purple-to-pink accent line seen along the top edge of the app."""
+    stops = stops or GRADIENT_STOPS
+    canvas.delete("all")
+    steps = max(1, width // 2)
+    for i in range(steps):
+        frac = i / max(1, steps - 1)
+        color = _interp_color(stops, frac)
+        x = int(i * width / steps)
+        x2 = int((i + 1) * width / steps) + 1
+        canvas.create_rectangle(x, 0, x2, height, fill=color, outline=color)
 
 
 def app_dir():
@@ -94,6 +162,15 @@ class LoraLibrarianApp(ctk.CTk):
         self.tm_min_puan = ctk.DoubleVar(value=4.0)
         self.tm_cakisma_mod = ctk.StringVar(value="rename")
 
+        # --- İSİM & TRIGGER (RENAME) ---
+        self.rn_kaynak = ctk.StringVar()
+        self.rn_mode = ctk.StringVar(value="meaningless")
+        self.rn_chk_trigger = ctk.BooleanVar(value=True)
+        self.rn_cakisma_mod = ctk.StringVar(value="rename")
+
+        self.istatistik_yeniden_adlandirilan = 0
+        self.istatistik_trigger_dolduruldu = 0
+
         self.istatistik_tasinan = 0
         self.istatistik_ayiklanan = 0
         self.istatistik_bos_klasor = 0
@@ -104,7 +181,7 @@ class LoraLibrarianApp(ctk.CTk):
         self.ayarlari_yukle()
 
         ctk.set_appearance_mode("dark")
-        self.geometry("1000x920")
+        self.geometry("1180x900")
 
         self.arayuz_ciz()
         self.ayarlari_uygula_widget()
@@ -118,45 +195,95 @@ class LoraLibrarianApp(ctk.CTk):
             w.destroy()
 
         self.title(t("app_title", self.lang))
+        self.configure(fg_color=BG_MAIN)
 
-        top_frame = ctk.CTkFrame(self, fg_color="transparent")
-        top_frame.pack(fill="x", padx=20, pady=(15, 0))
+        self.grid_columnconfigure(0, weight=0)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=0)
+        self.grid_rowconfigure(1, weight=0)
+        self.grid_rowconfigure(2, weight=3)
+        self.grid_rowconfigure(3, weight=2)
 
-        api_frame = ctk.CTkFrame(top_frame, fg_color="transparent")
-        api_frame.pack(side="left", fill="x", expand=True)
-        ctk.CTkLabel(api_frame, text=t("api_key_label", self.lang), font=("Segoe UI", 12, "bold")).pack(side="left", padx=(0, 10))
-        ctk.CTkEntry(api_frame, textvariable=self.api_key, width=380, show="*").pack(side="left")
+        # Decorative gradient accent strip (indigo -> violet -> pink)
+        gradient_canvas = tk.Canvas(self, height=4, highlightthickness=0, bd=0)
+        gradient_canvas.grid(row=0, column=0, columnspan=2, sticky="ew")
+        gradient_canvas.bind("<Configure>", lambda e: draw_gradient_bar(gradient_canvas, e.width, e.height))
 
-        controls_frame = ctk.CTkFrame(top_frame, fg_color="transparent")
-        controls_frame.pack(side="right")
+        # Header
+        header = ctk.CTkFrame(self, fg_color=BG_HEADER, corner_radius=0)
+        header.grid(row=1, column=0, columnspan=2, sticky="ew")
+
+        title_frame = ctk.CTkFrame(header, fg_color="transparent")
+        title_frame.pack(side="left", padx=20, pady=12)
+        ctk.CTkLabel(title_frame, text="LoRA Librarian", font=("Segoe UI", 16, "bold")).pack(anchor="w")
+        ctk.CTkLabel(title_frame, text=f"v{APP_VERSION}", font=("Segoe UI", 10), text_color=TEXT_MUTED).pack(anchor="w")
+
+        controls_frame = ctk.CTkFrame(header, fg_color="transparent")
+        controls_frame.pack(side="right", padx=20, pady=12)
 
         theme_values = [t("theme_dark", self.lang), t("theme_light", self.lang)]
-        self.theme_seg = ctk.CTkSegmentedButton(controls_frame, values=theme_values, command=self._on_theme_change)
+        self.theme_seg = ctk.CTkSegmentedButton(controls_frame, values=theme_values, command=self._on_theme_change, corner_radius=CORNER_BTN, selected_color=ACCENT, selected_hover_color=ACCENT_HOVER)
         current_theme_display = t("theme_dark", self.lang) if self.theme == "dark" else t("theme_light", self.lang)
         self.theme_seg.set(current_theme_display)
         self.theme_seg.pack(side="right", padx=(10, 0))
 
         lang_values = [LANG_LABELS[c] for c in LANG_CODES]
-        self.lang_seg = ctk.CTkSegmentedButton(controls_frame, values=lang_values, command=self._on_lang_change)
+        self.lang_seg = ctk.CTkSegmentedButton(controls_frame, values=lang_values, command=self._on_lang_change, corner_radius=CORNER_BTN, selected_color=ACCENT, selected_hover_color=ACCENT_HOVER)
         self.lang_seg.set(LANG_LABELS.get(self.lang, LANG_LABELS["tr"]))
         self.lang_seg.pack(side="right")
 
-        self.sekme = ctk.CTkTabview(self)
-        self.sekme.pack(fill="x", padx=20, pady=10)
+        api_frame = ctk.CTkFrame(header, fg_color="transparent")
+        api_frame.pack(side="right", padx=(0, 20), pady=12)
+        ctk.CTkLabel(api_frame, text=t("api_key_label", self.lang), font=("Segoe UI", 11, "bold")).pack(side="left", padx=(0, 8))
+        ctk.CTkEntry(api_frame, textvariable=self.api_key, width=220, show="*", corner_radius=CORNER_INPUT).pack(side="left")
 
-        self.tab_cp = self.sekme.add(t("tab_checkpoint", self.lang))
-        self.tab_lr = self.sekme.add(t("tab_lora", self.lang))
-        self.tab_tm = self.sekme.add(t("tab_clean", self.lang))
+        # Sidebar navigation
+        sidebar = ctk.CTkFrame(self, fg_color="transparent", width=200)
+        sidebar.grid(row=2, column=0, sticky="ns", padx=(16, 8), pady=(14, 8))
+        sidebar.grid_propagate(False)
+
+        self._nav_items = [("cp", "tab_checkpoint"), ("lr", "tab_lora"), ("tm", "tab_clean"), ("rn", "tab_rename")]
+        self.nav_buttons = {}
+        for key, label_key in self._nav_items:
+            btn = ctk.CTkButton(
+                sidebar, text=t(label_key, self.lang), anchor="w", corner_radius=CORNER_BTN,
+                fg_color="transparent", text_color=SIDEBAR_TEXT, hover_color=SIDEBAR_ITEM_HOVER,
+                command=lambda k=key: self.show_page(k),
+            )
+            btn.pack(fill="x", pady=4)
+            self.nav_buttons[key] = btn
+
+        # Content area (pages stacked, one raised at a time). The outer
+        # container is the single scrollable region; each page is a
+        # plain CTkFrame inside it - CTkScrollableFrame.tkraise() does
+        # not reliably reorder stacking in customtkinter, so the pages
+        # themselves must be plain frames for the raise-to-show trick
+        # to work.
+        content_container = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        content_container.grid(row=2, column=1, sticky="nsew", padx=(0, 16), pady=(14, 8))
+        content_container.grid_rowconfigure(0, weight=1)
+        content_container.grid_columnconfigure(0, weight=1)
+
+        self.tab_cp = ctk.CTkFrame(content_container, fg_color="transparent")
+        self.tab_lr = ctk.CTkFrame(content_container, fg_color="transparent")
+        self.tab_tm = ctk.CTkFrame(content_container, fg_color="transparent")
+        self.tab_rn = ctk.CTkFrame(content_container, fg_color="transparent")
+        for frame in (self.tab_cp, self.tab_lr, self.tab_tm, self.tab_rn):
+            frame.grid(row=0, column=0, sticky="new")
 
         self.sekme_checkpoint_doldur()
         self.sekme_lora_doldur()
         self.sekme_temizle_doldur()
+        self.sekme_rename_doldur()
 
-        log_frame = ctk.CTkFrame(self)
-        log_frame.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+        self.show_page(getattr(self, "current_page", "cp"))
+
+        # Log / process panel - spans full width, beneath sidebar + content
+        log_frame = ctk.CTkFrame(self, fg_color=CARD_BG, corner_radius=CORNER_CARD, border_width=1, border_color=BORDER)
+        log_frame.grid(row=3, column=0, columnspan=2, sticky="nsew", padx=16, pady=(8, 16))
 
         baslik_frame = ctk.CTkFrame(log_frame, fg_color="transparent")
-        baslik_frame.pack(fill="x", padx=10, pady=(5, 0))
+        baslik_frame.pack(fill="x", padx=14, pady=(12, 0))
 
         self.lbl_durum = ctk.CTkLabel(baslik_frame, text=f'{t("status_label_prefix", self.lang)} {t("status_waiting", self.lang)}', font=("Segoe UI", 12, "bold"))
         self.lbl_durum.pack(side="left")
@@ -164,13 +291,23 @@ class LoraLibrarianApp(ctk.CTk):
         self.lbl_yuzde = ctk.CTkLabel(baslik_frame, text="%0", font=("Segoe UI", 14, "bold"), text_color=ACCENT)
         self.lbl_yuzde.pack(side="right")
 
-        self.progress_bar = ctk.CTkProgressBar(log_frame, progress_color=ACCENT)
-        self.progress_bar.pack(fill="x", padx=10, pady=(5, 5))
+        self.progress_bar = ctk.CTkProgressBar(log_frame, progress_color=ACCENT, corner_radius=CORNER_INPUT)
+        self.progress_bar.pack(fill="x", padx=14, pady=(8, 8))
         self.progress_bar.set(0)
 
-        self.log_kutusu = ctk.CTkTextbox(log_frame, state="disabled", font=("Consolas", 12), text_color=ACCENT, fg_color=LOG_BG)
-        self.log_kutusu.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        self.log_kutusu = ctk.CTkTextbox(log_frame, state="disabled", font=("Consolas", 12), text_color=ACCENT, fg_color=LOG_BG, corner_radius=CORNER_INPUT)
+        self.log_kutusu.pack(fill="both", expand=True, padx=14, pady=(0, 14))
         self.log_yaz(t("log_ready", self.lang))
+
+    def show_page(self, key):
+        self.current_page = key
+        frames = {"cp": self.tab_cp, "lr": self.tab_lr, "tm": self.tab_tm, "rn": self.tab_rn}
+        frames[key].tkraise()
+        for k, btn in self.nav_buttons.items():
+            if k == key:
+                btn.configure(fg_color=ACCENT, text_color="white")
+            else:
+                btn.configure(fg_color="transparent", text_color=SIDEBAR_TEXT)
 
     def _on_lang_change(self, value):
         for code, label in LANG_LABELS.items():
@@ -187,17 +324,17 @@ class LoraLibrarianApp(ctk.CTk):
         ctk.set_appearance_mode(self.theme)
 
     def yol_secici_ciz(self, parent, kaynak_var, hedef_var=None, metin=None):
-        frame = ctk.CTkFrame(parent, fg_color=CARD_BG)
+        frame = ctk.CTkFrame(parent, fg_color=CARD_BG, corner_radius=CORNER_CARD, border_width=1, border_color=BORDER)
         frame.pack(fill="x", pady=10)
 
-        ctk.CTkLabel(frame, text=metin, font=("Segoe UI", 11, "bold")).grid(row=0, column=0, sticky="w", padx=10, pady=(10, 0))
-        ctk.CTkEntry(frame, textvariable=kaynak_var, width=550).grid(row=1, column=0, padx=10, pady=5, sticky="w")
-        ctk.CTkButton(frame, text=t("browse", self.lang), width=80, command=lambda: self.klasor_sec(kaynak_var)).grid(row=1, column=1, pady=5)
+        ctk.CTkLabel(frame, text=metin, font=("Segoe UI", 11, "bold")).grid(row=0, column=0, sticky="w", padx=14, pady=(14, 0))
+        ctk.CTkEntry(frame, textvariable=kaynak_var, width=550, corner_radius=CORNER_INPUT).grid(row=1, column=0, padx=14, pady=8, sticky="w")
+        ctk.CTkButton(frame, text=t("browse", self.lang), width=90, corner_radius=CORNER_BTN, fg_color=ACCENT, hover_color=ACCENT_HOVER, command=lambda: self.klasor_sec(kaynak_var)).grid(row=1, column=1, pady=8, padx=(0, 14))
 
         if hedef_var is not None:
-            ctk.CTkLabel(frame, text=t("folder_trash", self.lang), font=("Segoe UI", 11, "bold")).grid(row=2, column=0, sticky="w", padx=10, pady=(10, 0))
-            ctk.CTkEntry(frame, textvariable=hedef_var, width=550).grid(row=3, column=0, padx=10, pady=(5, 10), sticky="w")
-            ctk.CTkButton(frame, text=t("browse", self.lang), width=80, command=lambda: self.klasor_sec(hedef_var)).grid(row=3, column=1, pady=(5, 10))
+            ctk.CTkLabel(frame, text=t("folder_trash", self.lang), font=("Segoe UI", 11, "bold")).grid(row=2, column=0, sticky="w", padx=14, pady=(10, 0))
+            ctk.CTkEntry(frame, textvariable=hedef_var, width=550, corner_radius=CORNER_INPUT).grid(row=3, column=0, padx=14, pady=(8, 14), sticky="w")
+            ctk.CTkButton(frame, text=t("browse", self.lang), width=90, corner_radius=CORNER_BTN, fg_color=ACCENT, hover_color=ACCENT_HOVER, command=lambda: self.klasor_sec(hedef_var)).grid(row=3, column=1, pady=(8, 14), padx=(0, 14))
 
     def yaratici_menu_guncelle(self, kod, kutu):
         kutu.configure(state="normal" if kod == "list" else "disabled")
@@ -226,6 +363,18 @@ class LoraLibrarianApp(ctk.CTk):
                 return c
         return "off"
 
+    def _rename_mode_display_values(self):
+        return [t(RENAME_MODE_KEYS[c], self.lang) for c in RENAME_MODE_CODES]
+
+    def _rename_mode_display_from_code(self, code):
+        return t(RENAME_MODE_KEYS.get(code, "rename_mode_meaningless"), self.lang)
+
+    def _rename_mode_code_from_display(self, display):
+        for c in RENAME_MODE_CODES:
+            if t(RENAME_MODE_KEYS[c], self.lang) == display:
+                return c
+        return "meaningless"
+
     def ayarlar_ciz(self, parent, mod_tipi):
         chk_taban = self.cp_chk_taban if mod_tipi == "cp" else self.lr_chk_taban
         chk_resim = self.cp_chk_resim if mod_tipi == "cp" else self.lr_chk_resim
@@ -240,27 +389,28 @@ class LoraLibrarianApp(ctk.CTk):
         ctk.CTkSwitch(ust_frame, text=t("switch_fetch_meta", self.lang), variable=chk_resim).grid(row=0, column=1, sticky="w", padx=30, pady=5)
         ctk.CTkSwitch(ust_frame, text=t("switch_category", self.lang), variable=chk_kategori).grid(row=1, column=0, columnspan=2, sticky="w", pady=10)
 
-        yaratici_frame = ctk.CTkFrame(parent, fg_color=CARD_BG)
+        yaratici_frame = ctk.CTkFrame(parent, fg_color=CARD_BG, corner_radius=CORNER_CARD, border_width=1, border_color=BORDER)
         yaratici_frame.pack(fill="x", padx=10, pady=5)
 
-        ctk.CTkLabel(yaratici_frame, text=t("creator_folder_label", self.lang), font=("Segoe UI", 12, "bold")).grid(row=0, column=0, sticky="w", padx=10, pady=10)
+        ctk.CTkLabel(yaratici_frame, text=t("creator_folder_label", self.lang), font=("Segoe UI", 12, "bold")).grid(row=0, column=0, sticky="w", padx=14, pady=14)
 
-        yaratici_kutu = ctk.CTkTextbox(yaratici_frame, height=80, width=420)
+        yaratici_kutu = ctk.CTkTextbox(yaratici_frame, height=80, width=420, corner_radius=CORNER_INPUT)
 
         opt = ctk.CTkOptionMenu(
             yaratici_frame,
             values=self._creator_display_values(),
+            corner_radius=CORNER_BTN, fg_color=ACCENT, button_color=ACCENT, button_hover_color=ACCENT_HOVER,
             command=lambda disp, kutu=yaratici_kutu, var=yaratici_mod: (
                 var.set(self._creator_code_from_display(disp)),
                 self.yaratici_menu_guncelle(var.get(), kutu),
             ),
         )
         opt.set(self._creator_display_from_code(yaratici_mod.get()))
-        opt.grid(row=0, column=1, sticky="w", padx=10, pady=10)
+        opt.grid(row=0, column=1, sticky="w", padx=14, pady=14)
 
-        ctk.CTkLabel(yaratici_frame, text=t("creator_hint", self.lang), font=("Segoe UI", 10, "italic"), text_color="gray").grid(row=1, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 5))
+        ctk.CTkLabel(yaratici_frame, text=t("creator_hint", self.lang), font=("Segoe UI", 10, "italic"), text_color=TEXT_MUTED).grid(row=1, column=0, columnspan=2, sticky="w", padx=14, pady=(0, 5))
 
-        yaratici_kutu.grid(row=2, column=0, columnspan=2, padx=10, pady=(0, 10))
+        yaratici_kutu.grid(row=2, column=0, columnspan=2, padx=14, pady=(0, 14))
         yaratici_kutu.configure(state="normal" if yaratici_mod.get() == "list" else "disabled")
 
         if mod_tipi == "cp":
@@ -278,6 +428,7 @@ class LoraLibrarianApp(ctk.CTk):
         opt2 = ctk.CTkOptionMenu(
             cakisma_frame,
             values=self._conflict_display_values(),
+            corner_radius=CORNER_BTN, fg_color=ACCENT, button_color=ACCENT, button_hover_color=ACCENT_HOVER,
             command=lambda disp, var=cakisma_mod: var.set(self._conflict_code_from_display(disp)),
         )
         opt2.set(self._conflict_display_from_code(cakisma_mod.get()))
@@ -286,13 +437,13 @@ class LoraLibrarianApp(ctk.CTk):
     def sekme_checkpoint_doldur(self):
         self.yol_secici_ciz(self.tab_cp, self.cp_kaynak, metin=t("folder_checkpoint", self.lang))
         self.ayarlar_ciz(self.tab_cp, "cp")
-        self.btn_cp = ctk.CTkButton(self.tab_cp, text=t("btn_organize_checkpoint", self.lang), fg_color="#2b7a0b", hover_color="#3e9915", command=lambda: self.baslat_thread("checkpoint"))
+        self.btn_cp = ctk.CTkButton(self.tab_cp, text=t("btn_organize_checkpoint", self.lang), corner_radius=CORNER_BTN, height=38, fg_color="#2b7a0b", hover_color="#3e9915", command=lambda: self.baslat_thread("checkpoint"))
         self.btn_cp.pack(pady=10)
 
     def sekme_lora_doldur(self):
         self.yol_secici_ciz(self.tab_lr, self.lr_kaynak, metin=t("folder_lora", self.lang))
         self.ayarlar_ciz(self.tab_lr, "lr")
-        self.btn_lr = ctk.CTkButton(self.tab_lr, text=t("btn_organize_lora", self.lang), fg_color="#0b5b7a", hover_color="#157199", command=lambda: self.baslat_thread("lora"))
+        self.btn_lr = ctk.CTkButton(self.tab_lr, text=t("btn_organize_lora", self.lang), corner_radius=CORNER_BTN, height=38, fg_color="#0b5b7a", hover_color="#157199", command=lambda: self.baslat_thread("lora"))
         self.btn_lr.pack(pady=10)
 
     def sekme_temizle_doldur(self):
@@ -301,14 +452,14 @@ class LoraLibrarianApp(ctk.CTk):
         c_frame = ctk.CTkFrame(self.tab_tm, fg_color="transparent")
         c_frame.pack(anchor="w", padx=20, pady=10)
 
-        ctk.CTkSwitch(c_frame, text=t("switch_old_versions", self.lang), variable=self.tm_chk_eski).grid(row=0, column=0, sticky="w", pady=10)
-        ctk.CTkSwitch(c_frame, text=t("switch_low_rating", self.lang), variable=self.tm_chk_puan).grid(row=1, column=0, sticky="w", pady=(10, 0))
+        ctk.CTkSwitch(c_frame, text=t("switch_old_versions", self.lang), variable=self.tm_chk_eski, progress_color=ACCENT).grid(row=0, column=0, sticky="w", pady=10)
+        ctk.CTkSwitch(c_frame, text=t("switch_low_rating", self.lang), variable=self.tm_chk_puan, progress_color=ACCENT).grid(row=1, column=0, sticky="w", pady=(10, 0))
 
         slider_frame = ctk.CTkFrame(c_frame, fg_color="transparent")
         slider_frame.grid(row=2, column=0, sticky="w", pady=5, padx=30)
         ctk.CTkLabel(slider_frame, text=t("min_rating_label", self.lang)).pack(side="left")
         puan_lbl = ctk.CTkLabel(slider_frame, text=f"{self.tm_min_puan.get():.1f}", width=30)
-        slider = ctk.CTkSlider(slider_frame, from_=0.0, to=5.0, number_of_steps=50, variable=self.tm_min_puan, command=lambda v: puan_lbl.configure(text=f"{v:.1f}"))
+        slider = ctk.CTkSlider(slider_frame, from_=0.0, to=5.0, number_of_steps=50, variable=self.tm_min_puan, progress_color=ACCENT, button_color=ACCENT, button_hover_color=ACCENT_HOVER, command=lambda v: puan_lbl.configure(text=f"{v:.1f}"))
         slider.pack(side="left", padx=10)
         puan_lbl.pack(side="left")
 
@@ -318,13 +469,51 @@ class LoraLibrarianApp(ctk.CTk):
         opt3 = ctk.CTkOptionMenu(
             cakisma_frame,
             values=self._conflict_display_values(),
+            corner_radius=CORNER_BTN, fg_color=ACCENT, button_color=ACCENT, button_hover_color=ACCENT_HOVER,
             command=lambda disp: self.tm_cakisma_mod.set(self._conflict_code_from_display(disp)),
         )
         opt3.set(self._conflict_display_from_code(self.tm_cakisma_mod.get()))
         opt3.pack(side="left", padx=10)
 
-        self.btn_tm = ctk.CTkButton(self.tab_tm, text=t("btn_start_clean", self.lang), fg_color="#b5261a", hover_color="#d63424", command=lambda: self.baslat_thread("temizle"))
+        self.btn_tm = ctk.CTkButton(self.tab_tm, text=t("btn_start_clean", self.lang), corner_radius=CORNER_BTN, height=38, fg_color="#b5261a", hover_color="#d63424", command=lambda: self.baslat_thread("temizle"))
         self.btn_tm.pack(pady=20)
+
+    def sekme_rename_doldur(self):
+        self.yol_secici_ciz(self.tab_rn, self.rn_kaynak, metin=t("folder_lora", self.lang))
+
+        info_frame = ctk.CTkFrame(self.tab_rn, fg_color=CARD_BG, corner_radius=CORNER_CARD, border_width=1, border_color=BORDER)
+        info_frame.pack(fill="x", padx=10, pady=(5, 10))
+        ctk.CTkLabel(info_frame, text=t("rename_info_text", self.lang), font=("Segoe UI", 10, "italic"), text_color=TEXT_MUTED, justify="left", wraplength=680).pack(anchor="w", padx=14, pady=14)
+
+        opts_frame = ctk.CTkFrame(self.tab_rn, fg_color="transparent")
+        opts_frame.pack(fill="x", padx=10, pady=5)
+
+        ctk.CTkLabel(opts_frame, text=t("rename_mode_label", self.lang), font=("Segoe UI", 12, "bold")).grid(row=0, column=0, sticky="w", pady=10)
+        opt_rn = ctk.CTkOptionMenu(
+            opts_frame,
+            values=self._rename_mode_display_values(),
+            corner_radius=CORNER_BTN, fg_color=ACCENT, button_color=ACCENT, button_hover_color=ACCENT_HOVER,
+            command=lambda disp: self.rn_mode.set(self._rename_mode_code_from_display(disp)),
+        )
+        opt_rn.set(self._rename_mode_display_from_code(self.rn_mode.get()))
+        opt_rn.grid(row=0, column=1, sticky="w", padx=10, pady=10)
+
+        ctk.CTkSwitch(opts_frame, text=t("switch_fill_trigger", self.lang), variable=self.rn_chk_trigger, progress_color=ACCENT).grid(row=1, column=0, columnspan=2, sticky="w", pady=10)
+
+        cakisma_frame = ctk.CTkFrame(self.tab_rn, fg_color="transparent")
+        cakisma_frame.pack(fill="x", padx=10, pady=5)
+        ctk.CTkLabel(cakisma_frame, text=t("conflict_label", self.lang), font=("Segoe UI", 12, "bold")).pack(side="left", padx=10)
+        opt_rn2 = ctk.CTkOptionMenu(
+            cakisma_frame,
+            values=self._conflict_display_values(),
+            corner_radius=CORNER_BTN, fg_color=ACCENT, button_color=ACCENT, button_hover_color=ACCENT_HOVER,
+            command=lambda disp: self.rn_cakisma_mod.set(self._conflict_code_from_display(disp)),
+        )
+        opt_rn2.set(self._conflict_display_from_code(self.rn_cakisma_mod.get()))
+        opt_rn2.pack(side="left", padx=10)
+
+        self.btn_rn = ctk.CTkButton(self.tab_rn, text=t("btn_start_rename", self.lang), corner_radius=CORNER_BTN, height=38, fg_color="#7a4a0b", hover_color="#996015", command=lambda: self.baslat_thread("rename"))
+        self.btn_rn.pack(pady=20)
 
     # ------------------------------------------------------------------
     # Settings persistence (Ayarlar / Settings)
@@ -347,7 +536,7 @@ class LoraLibrarianApp(ctk.CTk):
                 ayarlar = json.load(f)
             self.lang = ayarlar.get("lang", "tr")
             self.theme = ayarlar.get("theme", "dark")
-            self._pending_geometry = ayarlar.get("geometry", "1000x920")
+            self._pending_geometry = ayarlar.get("geometry", "1180x900")
             self.api_key.set(ayarlar.get("api_key", ""))
 
             if "cp" in ayarlar:
@@ -378,6 +567,13 @@ class LoraLibrarianApp(ctk.CTk):
                 self.tm_chk_eski.set(d.get("eski", True))
                 self.tm_min_puan.set(d.get("min_puan", 4.0))
                 self.tm_cakisma_mod.set(d.get("cakisma_mod", "rename"))
+
+            if "rn" in ayarlar:
+                d = ayarlar["rn"]
+                self.rn_kaynak.set(d.get("kaynak", ""))
+                self.rn_mode.set(d.get("mode", "meaningless"))
+                self.rn_chk_trigger.set(d.get("trigger", True))
+                self.rn_cakisma_mod.set(d.get("cakisma_mod", "rename"))
         except Exception:
             pass
 
@@ -409,6 +605,10 @@ class LoraLibrarianApp(ctk.CTk):
             "tm": {
                 "kaynak": self.tm_kaynak.get(), "hedef": self.tm_hedef.get(), "puan": self.tm_chk_puan.get(),
                 "eski": self.tm_chk_eski.get(), "min_puan": self.tm_min_puan.get(), "cakisma_mod": self.tm_cakisma_mod.get(),
+            },
+            "rn": {
+                "kaynak": self.rn_kaynak.get(), "mode": self.rn_mode.get(),
+                "trigger": self.rn_chk_trigger.get(), "cakisma_mod": self.rn_cakisma_mod.get(),
             },
         }
         try:
@@ -579,6 +779,12 @@ class LoraLibrarianApp(ctk.CTk):
                       "y_mod": self.lr_yaratici_mod.get(), "y_liste": self.metin_kutusunu_oku(self.lr_yaratici_kutu), "cakisma": self.lr_cakisma_mod.get()}
             if not kaynak:
                 return messagebox.showwarning(t("dialog_warning_title", self.lang), t("dialog_warning_no_folder", self.lang))
+        elif mod == "rename":
+            kaynak = self.rn_kaynak.get()
+            hedef = kaynak
+            config = {"mode": self.rn_mode.get(), "trigger": self.rn_chk_trigger.get(), "cakisma": self.rn_cakisma_mod.get()}
+            if not kaynak:
+                return messagebox.showwarning(t("dialog_warning_title", self.lang), t("dialog_warning_no_folder", self.lang))
         else:
             kaynak, hedef = self.tm_kaynak.get(), self.tm_hedef.get()
             config = {"puan": self.tm_chk_puan.get(), "min_p": self.tm_min_puan.get(), "eski": self.tm_chk_eski.get(), "cakisma": self.tm_cakisma_mod.get()}
@@ -590,7 +796,9 @@ class LoraLibrarianApp(ctk.CTk):
         self.btn_cp.configure(state="disabled")
         self.btn_lr.configure(state="disabled")
         self.btn_tm.configure(state="disabled")
-        threading.Thread(target=self.ana_motor, args=(mod, kaynak, hedef, config), daemon=True).start()
+        self.btn_rn.configure(state="disabled")
+        motor = self.ana_motor_rename if mod == "rename" else self.ana_motor
+        threading.Thread(target=motor, args=(mod, kaynak, hedef, config), daemon=True).start()
 
     def ana_motor(self, mod, kaynak, hedef, config):
         self.islem_devam_ediyor = True
@@ -786,6 +994,259 @@ class LoraLibrarianApp(ctk.CTk):
         self.btn_cp.configure(state="normal")
         self.btn_lr.configure(state="normal")
         self.btn_tm.configure(state="normal")
+        self.btn_rn.configure(state="normal")
+        messagebox.showinfo(t("dialog_report_title", self.lang), ozet_metni)
+
+    # ------------------------------------------------------------------
+    # Rename & trigger-word engine
+    # ------------------------------------------------------------------
+    def rename_related_files(self, root, eski_base, yeni_base, cakisma_kodu):
+        """Rename the model file itself and every companion file that
+        shares its basename (.civitai.info, .json, preview images, .txt
+        etc. - whatever Civitai Helper / A1111 created next to it)."""
+        aranan = eski_base + "."
+        yeniden_adlandirilan = []
+
+        for f in list(os.listdir(root)):
+            if not (f.startswith(aranan) or f == eski_base):
+                continue
+            ek = f[len(eski_base):]  # e.g. ".safetensors", ".civitai.info", ".preview.png"
+            eski_yol = os.path.join(root, f)
+            yeni_dosya_adi = yeni_base + ek
+            yeni_yol = os.path.join(root, yeni_dosya_adi)
+
+            if os.path.abspath(eski_yol) == os.path.abspath(yeni_yol):
+                continue
+
+            if os.path.exists(yeni_yol):
+                if cakisma_kodu == "skip":
+                    self.log_yaz(t("log_skipped_exists", self.lang, file=yeni_dosya_adi))
+                    continue
+                elif cakisma_kodu == "overwrite":
+                    try:
+                        os.remove(yeni_yol)
+                    except Exception:
+                        pass
+                elif cakisma_kodu == "rename":
+                    kok, uzanti = os.path.splitext(yeni_dosya_adi)
+                    sayac = 1
+                    while os.path.exists(yeni_yol):
+                        yeni_yol = os.path.join(root, f"{kok}_{sayac}{uzanti}")
+                        sayac += 1
+
+            try:
+                os.rename(eski_yol, yeni_yol)
+                yeniden_adlandirilan.append(os.path.basename(yeni_yol))
+            except Exception:
+                self.log_yaz(t("log_move_failed", self.lang))
+
+        return yeniden_adlandirilan
+
+    def _trigger_kelimeleri_cikar(self, images, max_kelime=6):
+        """Heuristic keyword extraction from sample-image generation
+        prompts: keep only tokens that repeat across multiple sample
+        prompts and aren't generic SD boilerplate - not the whole
+        prompt, just the words that look like this LoRA's activation
+        keywords."""
+        stopwords = {
+            "masterpiece", "best quality", "high quality", "highres", "high resolution",
+            "detailed", "extremely detailed", "intricate details", "ultra detailed",
+            "4k", "8k", "absurdres", "sharp focus", "depth of field", "bokeh", "hdr",
+            "cinematic lighting", "volumetric lighting", "natural lighting", "professional photography",
+            "photorealistic", "hyperrealistic", "realistic", "perfect anatomy", "perfect hands",
+            "1girl", "1boy", "solo", "looking at viewer", "simple background", "white background",
+            "trending on artstation", "art by", "detailed background", "official art", "8k wallpaper",
+        }
+
+        tekrar_sayaci = {}
+        toplam_prompt = 0
+
+        for img in images or []:
+            meta = img.get("meta") or {}
+            prompt = meta.get("prompt") or ""
+            if not prompt:
+                continue
+            toplam_prompt += 1
+
+            prompt = re.sub(r"<lora:[^>]+>", "", prompt, flags=re.IGNORECASE)
+            gorulenler = set()
+            for parca in prompt.split(","):
+                token = parca.strip()
+                token = re.sub(r"^\(+|\)+$", "", token)
+                token = re.sub(r":\s*[\d.]+$", "", token).strip()
+                if not token or token.lower() in stopwords or len(token) < 3:
+                    continue
+                key = token.lower()
+                if key in gorulenler:
+                    continue
+                gorulenler.add(key)
+                if key not in tekrar_sayaci:
+                    tekrar_sayaci[key] = {"count": 0, "original": token}
+                tekrar_sayaci[key]["count"] += 1
+
+        if toplam_prompt == 0:
+            return ""
+
+        esik = max(2, (toplam_prompt // 2) + 1) if toplam_prompt > 1 else 1
+        secilenler = [v["original"] for v in tekrar_sayaci.values() if v["count"] >= esik]
+        return ", ".join(secilenler[:max_kelime])
+
+    def _trigger_dosyalarini_guncelle(self, root, base_adi, trigger_metni):
+        """Write the trigger words to both common conventions, without
+        ever overwriting something that's already there:
+        1) <base>.civitai.info -> "trainedWords" list (if the file exists)
+        2) <base>.json -> "activation text" (the field A1111/Forge's
+           built-in Lora card reads for 'Insert trigger words')."""
+        info_path = os.path.join(root, base_adi + ".civitai.info")
+        if os.path.exists(info_path):
+            try:
+                with open(info_path, "r", encoding="utf-8") as f:
+                    veri = json.load(f)
+                if not veri.get("trainedWords"):
+                    veri["trainedWords"] = [w.strip() for w in trigger_metni.split(",") if w.strip()]
+                    with open(info_path, "w", encoding="utf-8") as f:
+                        json.dump(veri, f, indent=4, ensure_ascii=False)
+            except Exception:
+                pass
+
+        json_path = os.path.join(root, base_adi + ".json")
+        try:
+            meta = {}
+            if os.path.exists(json_path):
+                with open(json_path, "r", encoding="utf-8") as f:
+                    meta = json.load(f)
+            if not meta.get("activation text"):
+                meta["activation text"] = trigger_metni
+                with open(json_path, "w", encoding="utf-8") as f:
+                    json.dump(meta, f, indent=4, ensure_ascii=False)
+        except Exception:
+            pass
+
+    def ana_motor_rename(self, mod, kaynak, hedef, config):
+        self.islem_devam_ediyor = True
+        self.istatistik_yeniden_adlandirilan = 0
+        self.istatistik_trigger_dolduruldu = 0
+        self.progress_bar.set(0)
+        self.lbl_yuzde.configure(text="%0")
+        self.lbl_durum.configure(text=f'{t("status_label_prefix", self.lang)} {t("status_running", self.lang)}')
+
+        api = self.api_key.get()
+        headers = {"Authorization": f"Bearer {api}"} if api else {}
+
+        self.log_yaz(t("log_system_started", self.lang, mode="RENAME/TRIGGER"))
+
+        islem_listesi = []
+        for root, dirs, files in os.walk(kaynak):
+            for file in files:
+                if file.endswith((".safetensors", ".ckpt", ".pt")):
+                    islem_listesi.append((root, file))
+
+        toplam_model = len(islem_listesi)
+        self.log_yaz(t("log_total_models", self.lang, count=toplam_model))
+
+        for index, (root, file) in enumerate(islem_listesi):
+            dosya_yolu = os.path.join(root, file)
+            if not os.path.exists(dosya_yolu):
+                continue
+
+            base_adi = os.path.splitext(file)[0]
+            self.log_yaz(t("log_model", self.lang, file=file))
+
+            m_id, model_verisi, model_adi, trained_words, images = None, None, None, [], []
+
+            info_p = os.path.join(root, base_adi + ".civitai.info")
+            if os.path.exists(info_p):
+                try:
+                    with open(info_p, "r", encoding="utf-8") as f:
+                        j = json.load(f)
+                        m_id = j.get("modelId") or j.get("id")
+                        model_adi = (j.get("model") or {}).get("name")
+                        trained_words = j.get("trainedWords") or []
+                        images = j.get("images") or []
+                except Exception:
+                    pass
+
+            if not model_adi or (config["trigger"] and not trained_words and not images):
+                try:
+                    if m_id:
+                        url = f"https://{API_DOMAIN}/api/v1/model-versions/{m_id}"
+                    else:
+                        url = f"https://{API_DOMAIN}/api/v1/model-versions/by-hash/{self.get_hash(dosya_yolu)}"
+                    cevap = self.session.get(url, headers=headers, timeout=10)
+                    if cevap.status_code == 200:
+                        model_verisi = cevap.json()
+                        m_id = model_verisi.get("modelId")
+                        model_adi = model_adi or (model_verisi.get("model") or {}).get("name")
+                        trained_words = trained_words or model_verisi.get("trainedWords") or []
+                        images = images or model_verisi.get("images") or []
+                    else:
+                        self.log_yaz(t("log_api_failed", self.lang))
+                except Exception:
+                    self.log_yaz(t("log_api_failed", self.lang))
+
+            if not model_adi:
+                self.log_yaz(t("log_no_metadata", self.lang))
+            else:
+                yeniden_ad_gerekli = (config["mode"] == "all" and self.dosya_temizle_adi(model_adi) != base_adi) or \
+                                     (config["mode"] == "meaningless" and is_meaningless_name(base_adi))
+                if yeniden_ad_gerekli:
+                    yeni_base = self.dosya_temizle_adi(model_adi)
+                    if yeni_base != base_adi:
+                        sonuc = self.rename_related_files(root, base_adi, yeni_base, config["cakisma"])
+                        if sonuc:
+                            self.log_yaz(t("log_renamed_files", self.lang, old=base_adi, new=yeni_base))
+                            self.istatistik_yeniden_adlandirilan += 1
+                            base_adi = yeni_base
+                elif config["mode"] == "meaningless":
+                    self.log_yaz(t("log_rename_meaningless_skip", self.lang))
+
+            if config["trigger"]:
+                mevcut_trigger = "".join(trained_words) if trained_words else ""
+                if not mevcut_trigger:
+                    json_path = os.path.join(root, base_adi + ".json")
+                    if os.path.exists(json_path):
+                        try:
+                            with open(json_path, "r", encoding="utf-8") as f:
+                                mevcut_trigger = (json.load(f) or {}).get("activation text", "")
+                        except Exception:
+                            mevcut_trigger = ""
+
+                if mevcut_trigger:
+                    self.log_yaz(t("log_trigger_already", self.lang))
+                elif trained_words:
+                    kelimeler = ", ".join(trained_words)
+                    self._trigger_dosyalarini_guncelle(root, base_adi, kelimeler)
+                    self.log_yaz(t("log_trigger_from_api", self.lang, words=kelimeler))
+                    self.istatistik_trigger_dolduruldu += 1
+                else:
+                    kelimeler = self._trigger_kelimeleri_cikar(images)
+                    if kelimeler:
+                        self._trigger_dosyalarini_guncelle(root, base_adi, kelimeler)
+                        self.log_yaz(t("log_trigger_extracted", self.lang, words=kelimeler))
+                        self.istatistik_trigger_dolduruldu += 1
+                    else:
+                        self.log_yaz(t("log_trigger_none_found", self.lang))
+
+            ilerleme_orani = (index + 1) / toplam_model if toplam_model > 0 else 1
+            self.progress_bar.set(ilerleme_orani)
+            self.lbl_yuzde.configure(text=f"%{int(ilerleme_orani * 100)}")
+            time.sleep(0.5)
+
+        self._hash_cache_kaydet()
+
+        ozet_metni = t(
+            "summary_text_rename", self.lang,
+            renamed=self.istatistik_yeniden_adlandirilan,
+            triggers=self.istatistik_trigger_dolduruldu,
+        )
+
+        self.log_yaz(f'{t("log_summary_title", self.lang)}\n{ozet_metni}')
+        self.lbl_durum.configure(text=f'{t("status_label_prefix", self.lang)} {t("status_done", self.lang)}')
+        self.islem_devam_ediyor = False
+        self.btn_cp.configure(state="normal")
+        self.btn_lr.configure(state="normal")
+        self.btn_tm.configure(state="normal")
+        self.btn_rn.configure(state="normal")
         messagebox.showinfo(t("dialog_report_title", self.lang), ozet_metni)
 
 
