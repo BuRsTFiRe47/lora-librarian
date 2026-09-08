@@ -64,6 +64,10 @@ RENAME_MODE_KEYS = {"meaningless": "rename_mode_meaningless", "all": "rename_mod
 _MEANINGLESS_PATTERNS = [
     re.compile(r"^[0-9a-fA-F]{6,}$"),                       # hex hash
     re.compile(r"^-?\d+$"),                                  # pure number (with optional leading dash, e.g. "-000013")
+    # multi-segment numeric IDs joined by dashes/underscores, e.g.
+    # "20260605-1780688763120-000006" (date + timestamp + counter,
+    # no actual words anywhere in the string)
+    re.compile(r"^\d+([-_]\d+)+$"),
     re.compile(r"(?i)^(lora|model|checkpoint|download|file|untitled|new\s*folder)[\s_-]*\d*$"),
     # UUID, optionally followed by a training-tool suffix like ".TA_trained"
     re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(\..*)?$"),
@@ -720,6 +724,44 @@ class LoraLibrarianApp(ctk.CTk):
             return url_ext
         return ".jpg"
 
+    @staticmethod
+    def _gecerli_resim_mi(content):
+        """Check the actual file-signature bytes rather than trusting
+        Content-Type - a blocked/misrouted request can come back with
+        HTTP 200 and a small HTML/JS 'page unavailable' body that still
+        claims to be an image, which is exactly what produced the
+        unreadable ('Can't read file header') cover images before."""
+        if not content or len(content) < 12:
+            return False
+        if content[:8] == b"\x89PNG\r\n\x1a\n":
+            return True
+        if content[:3] == b"\xff\xd8\xff":
+            return True
+        if content[:4] == b"RIFF" and content[8:12] == b"WEBP":
+            return True
+        if content[:6] in (b"GIF87a", b"GIF89a"):
+            return True
+        return False
+
+    @staticmethod
+    def _resim_url_varyantlari(url):
+        """Civitai's image CDN (imagecache.civitai.com) is a separate
+        host from the civitai.red site/API mirror, so it may not be
+        covered by whatever made civitai.red necessary in the first
+        place. Try rewriting the host onto the civitai.red domain
+        first, then fall back to the original URL if that fails."""
+        varyantlar = []
+        try:
+            from urllib.parse import urlsplit, urlunsplit
+            parcalar = urlsplit(url)
+            if parcalar.netloc.endswith("civitai.com") and "civitai.red" not in parcalar.netloc:
+                red_netloc = parcalar.netloc[: -len("civitai.com")] + "civitai.red"
+                varyantlar.append(urlunsplit((parcalar.scheme, red_netloc, parcalar.path, parcalar.query, parcalar.fragment)))
+        except Exception:
+            pass
+        varyantlar.append(url)
+        return varyantlar
+
     def dosya_temizle_adi(self, isim):
         for c in ['/', '\\', ':', '*', '?', '"', '<', '>', '|']:
             isim = isim.replace(c, "_")
@@ -974,18 +1016,22 @@ class LoraLibrarianApp(ctk.CTk):
 
             elif mod in ["checkpoint", "lora"]:
                 if config["resim"] and not resim_var and model_verisi and model_verisi.get("images"):
-                    try:
-                        img_url = model_verisi["images"][0]["url"]
-                        r_img = self.session.get(img_url, timeout=15)
-                        if r_img.status_code == 200 and r_img.content:
-                            ext = self._resim_uzantisi_belirle(r_img.headers.get("Content-Type", ""), img_url)
-                            with open(os.path.join(root, base_adi + ext), "wb") as f:
-                                f.write(r_img.content)
-                            self.log_yaz(t("log_cover_downloaded", self.lang))
-                        else:
-                            self.log_yaz(t("log_cover_failed", self.lang))
-                    except Exception:
-                        self.log_yaz(t("log_cover_failed", self.lang))
+                    img_url = model_verisi["images"][0]["url"]
+                    indirildi = False
+                    for varyant_url in self._resim_url_varyantlari(img_url):
+                        try:
+                            r_img = self.session.get(varyant_url, timeout=15)
+                            if r_img.status_code == 200 and self._gecerli_resim_mi(r_img.content):
+                                ext = self._resim_uzantisi_belirle(r_img.headers.get("Content-Type", ""), varyant_url)
+                                with open(os.path.join(root, base_adi + ext), "wb") as f:
+                                    f.write(r_img.content)
+                                self.log_yaz(t("log_cover_downloaded", self.lang))
+                                indirildi = True
+                                break
+                        except Exception:
+                            continue
+                    if not indirildi:
+                        self.log_yaz(t("log_cover_blocked", self.lang))
 
                 yol_parcalari = [kaynak]
                 if config["taban"] and t_taban != unknown_base:
@@ -1158,15 +1204,53 @@ class LoraLibrarianApp(ctk.CTk):
         secilenler = [v["original"] for key, v in tekrar_sayaci.items() if v["count"] >= esik or key in tags_lower]
         return ", ".join(secilenler[:max_kelime])
 
+    # Section headers that Civitai LoRA creators commonly use to list the
+    # actual outfit/costume keywords, even without saying "trigger words:"
+    # explicitly (used as a fallback - see _aciklamadan_trigger_cikar).
+    # Matches either a header alone in its own block ("Clothing:") or a
+    # header with the list inline on the same line ("Clothing: collar, ...").
+    _SECTION_START_RE = re.compile(
+        r"(?i)^(?:clothing|outfit|wardrobe|accessories|accessory|includes|parts|details|elements|features|tags)\s*:\s*(.*)$",
+        re.DOTALL,
+    )
+
+    @staticmethod
+    def _blok_kelimelerini_ayikla(blok, kelimeler):
+        for satir in blok.split("\n"):
+            satir = re.sub(r"^\s*\d+\s*[\.\)\-]+\s*", "", satir)  # "1-)", "2)", "3."
+            satir = re.sub(r"^\s*[-*•]\s*", "", satir)             # "- ", "• "
+            satir = satir.strip().rstrip(".").strip()
+            if not satir:
+                continue
+            for parca in satir.split(","):
+                parca = parca.strip()
+                if parca and len(parca) > 1:
+                    kelimeler.append(parca)
+
     def _aciklamadan_trigger_cikar(self, description_html):
         """Some creators (e.g. taiarts) write the trigger word/phrase in
         the free-text model description instead of Civitai's dedicated
-        trainedWords field. Look for an explicit 'trigger word(s):' /
-        'activation text:' style line and use whatever follows it."""
+        trainedWords field. First look for an explicit 'trigger word(s):'
+        / 'activation text:' style line. If that's not there either,
+        fall back to itemized section lists many costume LoRAs use
+        instead (e.g. 'Clothing:' / 'Accessories:' followed by a
+        comma-separated or numbered list of the actual descriptors,
+        each item sometimes in its own HTML paragraph)."""
         if not description_html:
             return ""
-        metin = re.sub(r"<[^>]+>", " ", description_html)
+
+        # Preserve paragraph breaks from block-level HTML tags before
+        # stripping the rest - otherwise "Clothing:\n<items>" collapses
+        # into one run-on line and section scoping breaks.
+        metin = description_html
+        metin = re.sub(r"(?i)<br\s*/?>", "\n", metin)
+        metin = re.sub(r"(?i)</p>", "\n\n", metin)
+        metin = re.sub(r"(?i)</li>", "\n", metin)
+        metin = re.sub(r"(?i)</div>", "\n", metin)
+        metin = re.sub(r"(?i)</h[1-6]>", "\n\n", metin)
+        metin = re.sub(r"<[^>]+>", " ", metin)
         metin = html.unescape(metin)
+
         desenler = [
             r"trigger\s*words?\s*[:\-]\s*([^\n<.]{3,150})",
             r"activation\s*(?:text|words?|prompt)\s*[:\-]\s*([^\n<.]{3,150})",
@@ -1178,7 +1262,49 @@ class LoraLibrarianApp(ctk.CTk):
                 aday = eslesme.group(1).strip(" :\u2014\u2013-")
                 if aday:
                     return aday
-        return ""
+
+        # Fallback: itemized 'Clothing:' / 'Accessories:' style sections.
+        # Walk paragraph-sized blocks; once a section header block is
+        # seen, keep collecting short, list-like blocks that follow it
+        # (each numbered/bulleted item is often its own <p>, so a blank
+        # line between them does NOT mean the section ended) until a
+        # long prose block or the next header/end.
+        bloklar = [b.strip() for b in re.split(r"\n\s*\n", metin) if b.strip()]
+        kelimeler = []
+        toplaniyor = False
+        for blok in bloklar:
+            baslik_eslesme = self._SECTION_START_RE.match(blok)
+            if baslik_eslesme:
+                toplaniyor = True
+                icerik = baslik_eslesme.group(1).strip()
+                if icerik:
+                    self._blok_kelimelerini_ayikla(icerik, kelimeler)
+                continue
+            if toplaniyor:
+                # A block is still "part of the list" if it's short (a
+                # single item) or itself a comma-separated list of short
+                # items, however long the whole block is - Civitai
+                # descriptions often put the whole list in one paragraph
+                # rather than one item per line. A block with a couple
+                # of commas but long, sentence-length segments is prose
+                # (e.g. a thank-you/Patreon note), not a tag list.
+                if len(blok) > 150:
+                    parcalar = [p.strip() for p in blok.split(",") if p.strip()]
+                    ort_uzunluk = sum(len(p) for p in parcalar) / max(1, len(parcalar))
+                    liste_gibi = len(parcalar) >= 3 and ort_uzunluk <= 30
+                    if not liste_gibi:
+                        toplaniyor = False
+                        continue
+                self._blok_kelimelerini_ayikla(blok, kelimeler)
+
+        gorulen = set()
+        sonuc = []
+        for k in kelimeler:
+            key = k.lower()
+            if key not in gorulen:
+                gorulen.add(key)
+                sonuc.append(k)
+        return ", ".join(sonuc[:20])
 
     def _trigger_dosyalarini_guncelle(self, root, base_adi, trigger_metni):
         """Write the trigger words to both common conventions, without

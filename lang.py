@@ -114,6 +114,12 @@ TRANSLATIONS = {
     "log_api_failed": {"tr": "   [!] API bağlantısı kurulamadı.", "en": "   [!] Could not connect to the API.", "ja": "   [!] APIに接続できませんでした。", "zh": "   [!] 无法连接到 API。"},
     "log_cover_downloaded": {"tr": "   [+] Kapak indirildi.", "en": "   [+] Cover image downloaded.", "ja": "   [+] カバー画像をダウンロードしました。", "zh": "   [+] 封面图片已下载。"},
     "log_cover_failed": {"tr": "   [!] Kapak indirilemedi (bağlantı hatası ya da geçersiz görsel).", "en": "   [!] Could not download cover image (connection error or invalid image).", "ja": "   [!] カバー画像をダウンロードできませんでした（接続エラーまたは無効な画像）。", "zh": "   [!] 无法下载封面图片（连接错误或图片无效）。"},
+    "log_cover_blocked": {
+        "tr": "   [!] Kapak resmi indirilemedi: gelen veri geçerli bir görsel değil. Görsel CDN'i (imagecache.civitai.com) ağınızda engelleniyor olabilir - civitai.red yalnızca ana siteyi/API'yi kapsıyor, görsel sunucusunu kapsamayabilir.",
+        "en": "   [!] Cover image download failed: the response wasn't a valid image. Your network may be blocking Civitai's image CDN (imagecache.civitai.com) - civitai.red only mirrors the main site/API, not necessarily the image server.",
+        "ja": "   [!] カバー画像のダウンロードに失敗しました：応答が有効な画像ではありません。ネットワークがCivitaiの画像CDN（imagecache.civitai.com）をブロックしている可能性があります - civitai.redは本サイト/APIのみをミラーしており、画像サーバーはカバーしていない場合があります。",
+        "zh": "   [!] 封面图片下载失败：返回内容不是有效图片。您的网络可能屏蔽了 Civitai 的图片 CDN（imagecache.civitai.com）——civitai.red 只镜像了主站/API，未必包含图片服务器。",
+    },
     "log_extracting_rating": {"tr": "   [Ayıklanıyor] Puan: {rating}/5", "en": "   [Extracting] Rating: {rating}/5", "ja": "   [除外中] 評価：{rating}/5", "zh": "   [正在移除] 评分：{rating}/5"},
     "log_folder_error": {"tr": "   [HATA] Klasör oluşturulamadı!", "en": "   [ERROR] Could not create folder!", "ja": "   [エラー] フォルダを作成できませんでした！", "zh": "   [错误] 无法创建文件夹！"},
     "log_skipped_exists": {"tr": "   [Atlandı] Hedefte '{file}' zaten var.", "en": "   [Skipped] '{file}' already exists at destination.", "ja": "   [スキップ] '{file}' は既に移動先に存在します。", "zh": "   [已跳过] 目标位置已存在 '{file}'。"},
