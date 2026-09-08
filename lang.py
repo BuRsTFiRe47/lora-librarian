@@ -82,6 +82,7 @@ TRANSLATIONS = {
     "log_rename_meaningless_skip": {"tr": "   [Atlandı] İsim zaten anlamlı görünüyor.", "en": "   [Skipped] Name already looks meaningful.", "ja": "   [スキップ] 名前は既に意味があるようです。", "zh": "   [已跳过] 文件名看起来已经有意义。"},
     "log_renamed_files": {"tr": "   [🏷️] Yeniden adlandırıldı: {old} -> {new}", "en": "   [🏷️] Renamed: {old} -> {new}", "ja": "   [🏷️] 名前変更：{old} -> {new}", "zh": "   [🏷️] 已重命名：{old} -> {new}"},
     "log_trigger_from_api": {"tr": "   [🔑] Trigger word(ler) Civitai'den alındı: {words}", "en": "   [🔑] Trigger word(s) fetched from Civitai: {words}", "ja": "   [🔑] Civitaiからトリガーワードを取得：{words}", "zh": "   [🔑] 已从 Civitai 获取触发词：{words}"},
+    "log_trigger_from_description": {"tr": "   [🔑] Model açıklamasından bulundu: {words}", "en": "   [🔑] Found in the model description: {words}", "ja": "   [🔑] モデルの説明文から検出：{words}", "zh": "   [🔑] 在模型描述中找到：{words}"},
     "log_trigger_extracted": {"tr": "   [🔑] Örnek görsellerden çıkarıldı: {words}", "en": "   [🔑] Extracted from sample images: {words}", "ja": "   [🔑] サンプル画像から抽出：{words}", "zh": "   [🔑] 已从示例图片中提取：{words}"},
     "log_trigger_none_found": {"tr": "   [–] Trigger word bulunamadı (örnek görsel/veri yetersiz).", "en": "   [–] No trigger word could be found (insufficient sample data).", "ja": "   [–] トリガーワードが見つかりませんでした（サンプルデータ不足）。", "zh": "   [–] 未能找到触发词（示例数据不足）。"},
     "log_trigger_already": {"tr": "   [–] Trigger word zaten mevcut, atlandı.", "en": "   [–] Trigger word already present, skipped.", "ja": "   [–] トリガーワードは既に存在するためスキップしました。", "zh": "   [–] 触发词已存在，已跳过。"},
