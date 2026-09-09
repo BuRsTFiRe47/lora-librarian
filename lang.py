@@ -74,6 +74,7 @@ TRANSLATIONS = {
         "zh": "从 Civitai 获取模型名称，并重命名 LoRA 文件及所有同名的相关文件（.civitai.info、预览图片、.json 等）。同时会从 Civitai 数据或示例图片的提示词中（仅提取相关关键词，而非完整提示词）补全缺失的触发词。",
     },
     "rename_mode_label": {"tr": "Yeniden Adlandırma Modu:", "en": "Rename Mode:", "ja": "リネームモード：", "zh": "重命名模式："},
+    "rename_mode_none": {"tr": "Hiçbiri (isme dokunma, sadece trigger word çek)", "en": "None (don't touch names, only fetch trigger words)", "ja": "なし（名前は変更せず、トリガーワードのみ取得）", "zh": "无（不修改文件名，仅获取触发词）"},
     "rename_mode_meaningless": {"tr": "Sadece Anlamsız İsimler", "en": "Meaningless Names Only", "ja": "意味のない名前のみ", "zh": "仅无意义的文件名"},
     "rename_mode_all": {"tr": "Civitai Adından Farklı Olan Tümü", "en": "All That Differ From Civitai Title", "ja": "Civitaiのタイトルと異なるすべて", "zh": "所有与 Civitai 标题不同的文件"},
     "switch_fill_trigger": {"tr": "Eksik Trigger Word'leri Doldur (Civitai/örnek görsellerden)", "en": "Fill Missing Trigger Words (from Civitai / sample images)", "ja": "不足しているトリガーワードを補完（Civitai／サンプル画像から）", "zh": "补全缺失的触发词（来自 Civitai／示例图片）"},
@@ -112,6 +113,18 @@ TRANSLATIONS = {
     "log_hash_reading": {"tr": "   [Hash] Okunuyor...", "en": "   [Hash] Reading...", "ja": "   [ハッシュ] 読み込み中...", "zh": "   [哈希] 正在读取..."},
     "log_api_saved": {"tr": "   [+] Veriler JSON olarak kaydedildi.", "en": "   [+] Data saved as JSON.", "ja": "   [+] データをJSONとして保存しました。", "zh": "   [+] 数据已保存为 JSON。"},
     "log_api_failed": {"tr": "   [!] API bağlantısı kurulamadı.", "en": "   [!] Could not connect to the API.", "ja": "   [!] APIに接続できませんでした。", "zh": "   [!] 无法连接到 API。"},
+    "log_api_failed_detail": {
+        "tr": "   [!] API isteği başarısız: {status}. (404 ise dosya muhtemelen Civitai'deki kayıttan sonra değiştirilmiş/hash'i farklı; başka bir hata koduysa ağ/civitai.red erişim sorunu olabilir.)",
+        "en": "   [!] API request failed: {status}. (If 404, the file's hash likely doesn't match Civitai's record anymore - e.g. it was modified after downloading; other codes usually mean a network/civitai.red access issue.)",
+        "ja": "   [!] APIリクエストが失敗しました：{status}。（404の場合、ファイルのハッシュがCivitaiの記録と一致しなくなっている可能性があります - 例えばダウンロード後に変更された場合。それ以外のコードは通常ネットワークまたはcivitai.redへのアクセス問題です。）",
+        "zh": "   [!] API 请求失败：{status}。（如果是 404，说明该文件的哈希值可能与 Civitai 记录的不再匹配——例如下载后被修改过；其他状态码通常意味着网络或 civitai.red 访问问题。）",
+    },
+    "log_no_model_id": {
+        "tr": "   [–] Model ID bulunamadı, açıklama metni sorgulanamıyor.",
+        "en": "   [–] No model ID available, can't look up the description text.",
+        "ja": "   [–] モデルIDが見つからないため、説明文を取得できません。",
+        "zh": "   [–] 未找到模型 ID，无法查询描述文本。",
+    },
     "log_cover_downloaded": {"tr": "   [+] Kapak indirildi.", "en": "   [+] Cover image downloaded.", "ja": "   [+] カバー画像をダウンロードしました。", "zh": "   [+] 封面图片已下载。"},
     "log_cover_failed": {"tr": "   [!] Kapak indirilemedi (bağlantı hatası ya da geçersiz görsel).", "en": "   [!] Could not download cover image (connection error or invalid image).", "ja": "   [!] カバー画像をダウンロードできませんでした（接続エラーまたは無効な画像）。", "zh": "   [!] 无法下载封面图片（连接错误或图片无效）。"},
     "log_cover_blocked": {

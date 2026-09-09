@@ -55,8 +55,8 @@ CONFLICT_KEYS = {"rename": "conflict_rename", "skip": "conflict_skip", "overwrit
 CREATOR_CODES = ["off", "all", "list"]
 CREATOR_KEYS = {"off": "creator_mode_off", "all": "creator_mode_all", "list": "creator_mode_list"}
 
-RENAME_MODE_CODES = ["meaningless", "all"]
-RENAME_MODE_KEYS = {"meaningless": "rename_mode_meaningless", "all": "rename_mode_all"}
+RENAME_MODE_CODES = ["none", "meaningless", "all"]
+RENAME_MODE_KEYS = {"none": "rename_mode_none", "meaningless": "rename_mode_meaningless", "all": "rename_mode_all"}
 
 # Filenames that look like a hash / auto-generated ID rather than an
 # actual model title - candidates for renaming when "meaningless only"
@@ -83,6 +83,48 @@ _MEANINGLESS_PATTERNS = [
 # Civitai title even in "meaningless only" mode.
 _CJK_PATTERN = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
 
+# A token that's just letters followed by digits (optionally with
+# decimals) to the very end - "v10", "V1", "v0.5", "XL2", "SD1.5",
+# "aidmaMJ6.1" - is a normal version/base-model tag, not an obfuscated
+# or coded fragment, and should never trip the checks below.
+_VERSION_TOKEN_RE = re.compile(r"^[A-Za-z]+\d+(\.\d+)*$")
+
+# Leetspeak digit substitutions in common use (0=o, 1=i/l, 3=e, 4=a,
+# 5=s, 7=t). A token using ONLY these digits, with at least one digit
+# sitting strictly between two other characters of the token (i.e. not
+# just a trailing version number), reads as a word with letters swapped
+# for digits rather than an actual descriptive name - e.g.
+# "3mb3ll1sh3d" (embellished), "4d41" (Ada), "M1n1" (Mini).
+_LEET_DIGITS = set("013457")
+
+
+def _leetspeak_gibi_mi(token: str) -> bool:
+    if len(token) < 4 or _VERSION_TOKEN_RE.match(token) or not re.search(r"[A-Za-z]", token):
+        return False
+    digits = [c for c in token if c.isdigit()]
+    if len(digits) < 2 or not all(d in _LEET_DIGITS for d in digits):
+        return False
+    return any(c.isdigit() and 0 < i < len(token) - 1 for i, c in enumerate(token))
+
+
+def _isim_rakam_orani_yuksek_mi(name: str, esik: float = 0.45) -> bool:
+    """A filename that's mostly digits once ordinary version tags are
+    set aside (e.g. '2434_6_soci24') isn't a real title, even if it
+    doesn't match any of the fixed ID/hash patterns above."""
+    toplam_alnum = 0
+    toplam_rakam = 0
+    for tok in re.split(r"[ _\-]+", name):
+        if not tok or _VERSION_TOKEN_RE.match(tok):
+            continue
+        for c in tok:
+            if c.isalnum():
+                toplam_alnum += 1
+                if c.isdigit():
+                    toplam_rakam += 1
+    if toplam_alnum < 4:
+        return False
+    return (toplam_rakam / toplam_alnum) >= esik
+
 
 def is_meaningless_name(name: str) -> bool:
     name = name.strip()
@@ -92,6 +134,14 @@ def is_meaningless_name(name: str) -> bool:
     # hash sense, but it isn't the English title either - the user wants
     # these translated too.
     if _CJK_PATTERN.search(name) and not re.search(r"[A-Za-z]{3,}", name):
+        return True
+    # Leetspeak-obfuscated words (e.g. "3mb3ll1sh3d_Ilus_v10") or names
+    # that are mostly digits once version tags are excluded (e.g.
+    # "2434_6_soci24") aren't readable titles either, even though they
+    # contain letters and don't match the fixed ID patterns above.
+    if any(_leetspeak_gibi_mi(tok) for tok in re.split(r"[ _\-]+", name)):
+        return True
+    if _isim_rakam_orani_yuksek_mi(name):
         return True
     return False
 
@@ -156,8 +206,27 @@ def app_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
 
-SETTINGS_PATH = os.path.join(app_dir(), "ayarlar.json")
+SETTINGS_PATH = os.path.join(app_dir(), "LL-Settings.json")
+LEGACY_SETTINGS_PATH = os.path.join(app_dir(), "ayarlar.json")
 HASH_CACHE_PATH = os.path.join(app_dir(), "hash_cache.json")
+
+
+def _ayarlari_gerekirse_tasi():
+    """One-time migration: earlier releases used the generic filename
+    'ayarlar.json' for settings, which collides with Preview Smith when
+    both apps share the same folder (it uses the same generic name
+    too). If LL-Settings.json doesn't exist yet but an old ayarlar.json
+    does, and it actually looks like ours (has our top-level keys),
+    rename it forward so existing settings aren't lost."""
+    if os.path.exists(SETTINGS_PATH) or not os.path.exists(LEGACY_SETTINGS_PATH):
+        return
+    try:
+        with open(LEGACY_SETTINGS_PATH, "r", encoding="utf-8") as f:
+            veri = json.load(f)
+        if isinstance(veri, dict) and any(k in veri for k in ("cp", "lr", "tm", "rn", "lang", "theme")):
+            os.rename(LEGACY_SETTINGS_PATH, SETTINGS_PATH)
+    except Exception:
+        pass
 
 
 class LoraLibrarianApp(ctk.CTk):
@@ -211,6 +280,7 @@ class LoraLibrarianApp(ctk.CTk):
         self._creator_text_cp = ""
         self._creator_text_lr = ""
 
+        _ayarlari_gerekirse_tasi()
         self.ayarlari_yukle()
 
         ctk.set_appearance_mode("dark")
@@ -1210,7 +1280,8 @@ class LoraLibrarianApp(ctk.CTk):
     # Matches either a header alone in its own block ("Clothing:") or a
     # header with the list inline on the same line ("Clothing: collar, ...").
     _SECTION_START_RE = re.compile(
-        r"(?i)^(?:clothing|outfit|wardrobe|accessories|accessory|includes|parts|details|elements|features|tags)\s*:\s*(.*)$",
+        r"(?i)^(?:clothing|outfit|wardrobe|accessories|accessory|includes|contains|parts|details|elements|"
+        r"features|tags|prompt|prompts|keywords?|set\s*includes|outfit\s*includes)\s*:\s*(.*)$",
         re.DOTALL,
     )
 
@@ -1304,6 +1375,38 @@ class LoraLibrarianApp(ctk.CTk):
             if key not in gorulen:
                 gorulen.add(key)
                 sonuc.append(k)
+        if sonuc:
+            return ", ".join(sonuc[:20])
+
+        # Last resort: some creators (e.g. Don_pelli) just list the
+        # descriptors in a plain paragraph with no header at all. Scan
+        # every block and use whichever one looks most like a genuine
+        # tag list - several short, comma-separated segments - rather
+        # than leaving the LoRA with nothing.
+        en_iyi_blok, en_iyi_skor = None, 0
+        for blok in bloklar:
+            parcalar = [p.strip() for p in blok.split(",") if p.strip()]
+            if len(parcalar) < 3:
+                continue
+            ort_uzunluk = sum(len(p) for p in parcalar) / len(parcalar)
+            if ort_uzunluk > 30:
+                continue
+            if len(parcalar) > en_iyi_skor:
+                en_iyi_skor = len(parcalar)
+                en_iyi_blok = blok
+        if en_iyi_blok:
+            son_care = []
+            self._blok_kelimelerini_ayikla(en_iyi_blok, son_care)
+            gorulen2 = set()
+            sonuc2 = []
+            for k in son_care:
+                key = k.lower()
+                if key not in gorulen2:
+                    gorulen2.add(key)
+                    sonuc2.append(k)
+            return ", ".join(sonuc2[:20])
+
+        return ""
         return ", ".join(sonuc[:20])
 
     def _trigger_dosyalarini_guncelle(self, root, base_adi, trigger_metni):
@@ -1396,9 +1499,9 @@ class LoraLibrarianApp(ctk.CTk):
                         trained_words = trained_words or model_verisi.get("trainedWords") or []
                         images = images or model_verisi.get("images") or []
                     else:
-                        self.log_yaz(t("log_api_failed", self.lang))
-                except Exception:
-                    self.log_yaz(t("log_api_failed", self.lang))
+                        self.log_yaz(t("log_api_failed_detail", self.lang, status=cevap.status_code))
+                except Exception as e:
+                    self.log_yaz(t("log_api_failed_detail", self.lang, status=str(e)))
 
             if not model_adi:
                 self.log_yaz(t("log_no_metadata", self.lang))
@@ -1435,19 +1538,23 @@ class LoraLibrarianApp(ctk.CTk):
                     self.log_yaz(t("log_trigger_from_api", self.lang, words=kelimeler))
                     self.istatistik_trigger_dolduruldu += 1
                 else:
-                    if not tags and m_id:
+                    if m_id:
                         try:
                             r2 = self.session.get(f"https://{API_DOMAIN}/api/v1/models/{m_id}", headers=headers, params=CIVITAI_CONTENT_PARAMS, timeout=10)
                             if r2.status_code == 200:
                                 model_ust_veri = r2.json()
-                                tags = model_ust_veri.get("tags") or []
+                                if not tags:
+                                    tags = model_ust_veri.get("tags") or []
                                 aciklama_metni = model_ust_veri.get("description", "")
                             else:
                                 aciklama_metni = ""
-                        except Exception:
+                                self.log_yaz(t("log_api_failed_detail", self.lang, status=r2.status_code))
+                        except Exception as e:
                             aciklama_metni = ""
+                            self.log_yaz(t("log_api_failed_detail", self.lang, status=str(e)))
                     else:
                         aciklama_metni = ""
+                        self.log_yaz(t("log_no_model_id", self.lang))
 
                     kelimeler = self._trigger_kelimeleri_cikar(images, tags=tags)
                     kaynak_aciklama = False

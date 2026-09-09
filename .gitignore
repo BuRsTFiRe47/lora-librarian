@@ -6,6 +6,7 @@ dist/
 *.spec
 
 # App-generated files (kişisel ayarlar / personal settings)
+LL-Settings.json
 ayarlar.json
 hash_cache.json
 
