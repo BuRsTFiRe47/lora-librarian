@@ -279,12 +279,13 @@ class LoraLibrarianApp(ctk.CTk):
 
         self._creator_text_cp = ""
         self._creator_text_lr = ""
+        self.klasor_gecmisi = []
 
         _ayarlari_gerekirse_tasi()
         self.ayarlari_yukle()
 
         ctk.set_appearance_mode("dark")
-        self.geometry("1180x900")
+        self.geometry("1180x800")
 
         self.arayuz_ciz()
         self.ayarlari_uygula_widget()
@@ -304,7 +305,7 @@ class LoraLibrarianApp(ctk.CTk):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=0)
         self.grid_rowconfigure(1, weight=0)
-        self.grid_rowconfigure(2, weight=3)
+        self.grid_rowconfigure(2, weight=4)
         self.grid_rowconfigure(3, weight=2)
 
         # Decorative gradient accent strip (indigo -> violet -> pink)
@@ -372,7 +373,7 @@ class LoraLibrarianApp(ctk.CTk):
         self.tab_tm = ctk.CTkFrame(content_container, fg_color="transparent")
         self.tab_rn = ctk.CTkFrame(content_container, fg_color="transparent")
         for frame in (self.tab_cp, self.tab_lr, self.tab_tm, self.tab_rn):
-            frame.grid(row=0, column=0, sticky="new")
+            frame.grid(row=0, column=0, sticky="nsew")
 
         self.sekme_checkpoint_doldur()
         self.sekme_lora_doldur()
@@ -394,12 +395,16 @@ class LoraLibrarianApp(ctk.CTk):
         self.lbl_yuzde = ctk.CTkLabel(baslik_frame, text="%0", font=("Segoe UI", 14, "bold"), text_color=ACCENT)
         self.lbl_yuzde.pack(side="right")
 
-        self.progress_bar = ctk.CTkProgressBar(log_frame, progress_color=ACCENT, corner_radius=CORNER_INPUT)
-        self.progress_bar.pack(fill="x", padx=14, pady=(8, 8))
+        ctk.CTkButton(baslik_frame, text=t("btn_save_log", self.lang), width=110, height=24, corner_radius=CORNER_BTN,
+                      fg_color="transparent", border_width=1, border_color=BORDER, text_color=SIDEBAR_TEXT,
+                      hover_color=SIDEBAR_ITEM_HOVER, font=("Segoe UI", 11), command=self.log_dosyaya_kaydet).pack(side="right", padx=(0, 12))
+
+        self.progress_bar = ctk.CTkProgressBar(log_frame, progress_color=ACCENT, corner_radius=CORNER_INPUT, height=10)
+        self.progress_bar.pack(fill="x", padx=14, pady=(6, 6))
         self.progress_bar.set(0)
 
-        self.log_kutusu = ctk.CTkTextbox(log_frame, state="disabled", font=("Consolas", 12), text_color=ACCENT, fg_color=LOG_BG, corner_radius=CORNER_INPUT)
-        self.log_kutusu.pack(fill="both", expand=True, padx=14, pady=(0, 14))
+        self.log_kutusu = ctk.CTkTextbox(log_frame, state="disabled", font=("Consolas", 11), text_color=ACCENT, fg_color=LOG_BG, corner_radius=CORNER_INPUT)
+        self.log_kutusu.pack(fill="both", expand=True, padx=14, pady=(0, 10))
         self.log_yaz(t("log_ready", self.lang))
 
     def show_page(self, key):
@@ -431,13 +436,15 @@ class LoraLibrarianApp(ctk.CTk):
         frame.pack(fill="x", pady=10)
 
         ctk.CTkLabel(frame, text=metin, font=("Segoe UI", 11, "bold")).grid(row=0, column=0, sticky="w", padx=14, pady=(14, 0))
-        ctk.CTkEntry(frame, textvariable=kaynak_var, width=550, corner_radius=CORNER_INPUT).grid(row=1, column=0, padx=14, pady=8, sticky="w")
-        ctk.CTkButton(frame, text=t("browse", self.lang), width=90, corner_radius=CORNER_BTN, fg_color=ACCENT, hover_color=ACCENT_HOVER, command=lambda: self.klasor_sec(kaynak_var)).grid(row=1, column=1, pady=8, padx=(0, 14))
+        ctk.CTkEntry(frame, textvariable=kaynak_var, width=480, corner_radius=CORNER_INPUT).grid(row=1, column=0, padx=14, pady=8, sticky="w")
+        ctk.CTkButton(frame, text="🕘", width=36, corner_radius=CORNER_BTN, fg_color="transparent", border_width=1, border_color=BORDER, text_color=SIDEBAR_TEXT, hover_color=SIDEBAR_ITEM_HOVER, command=lambda v=kaynak_var: self.gecmis_penceresi_ac(v)).grid(row=1, column=1, pady=8, padx=(0, 6))
+        ctk.CTkButton(frame, text=t("browse", self.lang), width=90, corner_radius=CORNER_BTN, fg_color=ACCENT, hover_color=ACCENT_HOVER, command=lambda: self.klasor_sec(kaynak_var)).grid(row=1, column=2, pady=8, padx=(0, 14))
 
         if hedef_var is not None:
             ctk.CTkLabel(frame, text=t("folder_trash", self.lang), font=("Segoe UI", 11, "bold")).grid(row=2, column=0, sticky="w", padx=14, pady=(10, 0))
-            ctk.CTkEntry(frame, textvariable=hedef_var, width=550, corner_radius=CORNER_INPUT).grid(row=3, column=0, padx=14, pady=(8, 14), sticky="w")
-            ctk.CTkButton(frame, text=t("browse", self.lang), width=90, corner_radius=CORNER_BTN, fg_color=ACCENT, hover_color=ACCENT_HOVER, command=lambda: self.klasor_sec(hedef_var)).grid(row=3, column=1, pady=(8, 14), padx=(0, 14))
+            ctk.CTkEntry(frame, textvariable=hedef_var, width=480, corner_radius=CORNER_INPUT).grid(row=3, column=0, padx=14, pady=(8, 14), sticky="w")
+            ctk.CTkButton(frame, text="🕘", width=36, corner_radius=CORNER_BTN, fg_color="transparent", border_width=1, border_color=BORDER, text_color=SIDEBAR_TEXT, hover_color=SIDEBAR_ITEM_HOVER, command=lambda v=hedef_var: self.gecmis_penceresi_ac(v)).grid(row=3, column=1, pady=(8, 14), padx=(0, 6))
+            ctk.CTkButton(frame, text=t("browse", self.lang), width=90, corner_radius=CORNER_BTN, fg_color=ACCENT, hover_color=ACCENT_HOVER, command=lambda: self.klasor_sec(hedef_var)).grid(row=3, column=2, pady=(8, 14), padx=(0, 14))
 
     def yaratici_menu_guncelle(self, kod, kutu):
         kutu.configure(state="normal" if kod == "list" else "disabled")
@@ -639,8 +646,9 @@ class LoraLibrarianApp(ctk.CTk):
                 ayarlar = json.load(f)
             self.lang = ayarlar.get("lang", "tr")
             self.theme = ayarlar.get("theme", "dark")
-            self._pending_geometry = ayarlar.get("geometry", "1180x900")
+            self._pending_geometry = ayarlar.get("geometry", "1180x800")
             self.api_key.set(ayarlar.get("api_key", ""))
+            self.klasor_gecmisi = ayarlar.get("recent_folders", [])
 
             if "cp" in ayarlar:
                 d = ayarlar["cp"]
@@ -695,6 +703,7 @@ class LoraLibrarianApp(ctk.CTk):
             "theme": self.theme,
             "geometry": self.geometry(),
             "api_key": self.api_key.get(),
+            "recent_folders": self.klasor_gecmisi,
             "cp": {
                 "kaynak": self.cp_kaynak.get(), "taban": self.cp_chk_taban.get(), "kategori": self.cp_chk_kategori.get(),
                 "resim": self.cp_chk_resim.get(), "yaratici_mod": self.cp_yaratici_mod.get(), "cakisma_mod": self.cp_cakisma_mod.get(),
@@ -745,12 +754,78 @@ class LoraLibrarianApp(ctk.CTk):
         yol = filedialog.askdirectory()
         if yol:
             degisken.set(yol)
+            self._gecmise_ekle(yol)
+
+    def _gecmise_ekle(self, yol):
+        if not yol:
+            return
+        if yol in self.klasor_gecmisi:
+            self.klasor_gecmisi.remove(yol)
+        self.klasor_gecmisi.insert(0, yol)
+        self.klasor_gecmisi = self.klasor_gecmisi[:12]
+
+    def gecmis_penceresi_ac(self, hedef_var):
+        pencere = ctk.CTkToplevel(self)
+        pencere.title(t("history_window_title", self.lang))
+        pencere.geometry("520x380")
+        pencere.configure(fg_color=BG_MAIN)
+        pencere.transient(self)
+        pencere.attributes("-topmost", True)
+        self._gecmis_pencere_ciz(pencere, hedef_var)
+
+    def _gecmis_pencere_ciz(self, pencere, hedef_var):
+        for w in pencere.winfo_children():
+            w.destroy()
+
+        liste_frame = ctk.CTkScrollableFrame(pencere, fg_color="transparent")
+        liste_frame.pack(fill="both", expand=True, padx=12, pady=12)
+
+        if not self.klasor_gecmisi:
+            ctk.CTkLabel(liste_frame, text=t("history_empty", self.lang), text_color=TEXT_MUTED).pack(pady=30)
+            return
+
+        for yol in self.klasor_gecmisi:
+            satir = ctk.CTkFrame(liste_frame, fg_color=CARD_BG, corner_radius=CORNER_INPUT, border_width=1, border_color=BORDER)
+            satir.pack(fill="x", pady=4)
+            ctk.CTkButton(
+                satir, text=yol, anchor="w", fg_color="transparent", hover_color=SIDEBAR_ITEM_HOVER, corner_radius=CORNER_INPUT,
+                command=lambda y=yol, v=hedef_var, p=pencere: self._gecmisten_sec(y, v, p),
+            ).pack(side="left", fill="x", expand=True, padx=(6, 0), pady=4)
+            ctk.CTkButton(
+                satir, text="✕", width=32, corner_radius=CORNER_INPUT, fg_color="#b5261a", hover_color="#d63424",
+                command=lambda y=yol, v=hedef_var, p=pencere: self._gecmisten_sil(y, v, p),
+            ).pack(side="right", padx=6, pady=4)
+
+    def _gecmisten_sec(self, yol, hedef_var, pencere):
+        hedef_var.set(yol)
+        self._gecmise_ekle(yol)
+        pencere.destroy()
+
+    def _gecmisten_sil(self, yol, hedef_var, pencere):
+        if yol in self.klasor_gecmisi:
+            self.klasor_gecmisi.remove(yol)
+        self._gecmis_pencere_ciz(pencere, hedef_var)
 
     def log_yaz(self, mesaj):
         self.log_kutusu.configure(state="normal")
         self.log_kutusu.insert("end", mesaj + "\n")
         self.log_kutusu.see("end")
         self.log_kutusu.configure(state="disabled")
+
+    def log_dosyaya_kaydet(self):
+        icerik = self.log_kutusu.get("1.0", "end-1c")
+        if not icerik.strip():
+            return
+        varsayilan_ad = f"lora-librarian-log-{time.strftime('%Y%m%d-%H%M%S')}.txt"
+        yol = filedialog.asksaveasfilename(defaultextension=".txt", initialfile=varsayilan_ad,
+                                            filetypes=[("Text", "*.txt"), ("All files", "*.*")])
+        if not yol:
+            return
+        try:
+            with open(yol, "w", encoding="utf-8") as f:
+                f.write(icerik)
+        except Exception:
+            messagebox.showwarning(t("dialog_warning_title", self.lang), t("log_save_failed", self.lang))
 
     def get_hash(self, filepath):
         """SHA-256 hash with a size+mtime cache so re-scanning an
@@ -1470,7 +1545,7 @@ class LoraLibrarianApp(ctk.CTk):
             base_adi = os.path.splitext(file)[0]
             self.log_yaz(t("log_model", self.lang, file=file))
 
-            m_id, model_verisi, model_adi, trained_words, images, tags = None, None, None, [], [], []
+            m_id, model_verisi, model_adi, trained_words, images, tags, taban_raw = None, None, None, [], [], [], None
 
             info_p = os.path.join(root, base_adi + ".civitai.info")
             if os.path.exists(info_p):
@@ -1482,6 +1557,7 @@ class LoraLibrarianApp(ctk.CTk):
                         trained_words = j.get("trainedWords") or []
                         images = j.get("images") or []
                         tags = j.get("tags") or []
+                        taban_raw = j.get("baseModel")
                 except Exception:
                     pass
 
@@ -1498,6 +1574,7 @@ class LoraLibrarianApp(ctk.CTk):
                         model_adi = model_adi or (model_verisi.get("model") or {}).get("name")
                         trained_words = trained_words or model_verisi.get("trainedWords") or []
                         images = images or model_verisi.get("images") or []
+                        taban_raw = taban_raw or model_verisi.get("baseModel")
                     else:
                         self.log_yaz(t("log_api_failed_detail", self.lang, status=cevap.status_code))
                 except Exception as e:
@@ -1509,7 +1586,11 @@ class LoraLibrarianApp(ctk.CTk):
                 yeniden_ad_gerekli = (config["mode"] == "all" and self.dosya_temizle_adi(model_adi) != base_adi) or \
                                      (config["mode"] == "meaningless" and is_meaningless_name(base_adi))
                 if yeniden_ad_gerekli:
-                    yeni_base = self.dosya_temizle_adi(model_adi)
+                    taban_temiz = normalize_base_model(taban_raw, "") if taban_raw else ""
+                    if taban_temiz:
+                        yeni_base = self.dosya_temizle_adi(f"{model_adi} - {taban_temiz}")
+                    else:
+                        yeni_base = self.dosya_temizle_adi(model_adi)
                     if yeni_base != base_adi:
                         sonuc = self.rename_related_files(root, base_adi, yeni_base, config["cakisma"])
                         if sonuc:

@@ -41,6 +41,8 @@ TRANSLATIONS = {
     "folder_scan": {"tr": "Taranacak Ana Klasör:", "en": "Main Folder to Scan:", "ja": "スキャンするメインフォルダ：", "zh": "要扫描的主文件夹："},
     "folder_trash": {"tr": "Ayıklananların Gideceği Klasör (Çöp/Arşiv):", "en": "Destination for Removed Items (Trash/Archive):", "ja": "除外されたファイルの移動先（ゴミ箱/アーカイブ）：", "zh": "移除项目的目标文件夹（回收站/存档）："},
     "browse": {"tr": "Gözat", "en": "Browse", "ja": "参照", "zh": "浏览"},
+    "history_window_title": {"tr": "Klasör Geçmişi", "en": "Folder History", "ja": "フォルダ履歴", "zh": "文件夹历史记录"},
+    "history_empty": {"tr": "Henüz geçmiş yok.", "en": "No history yet.", "ja": "まだ履歴はありません。", "zh": "暂无历史记录。"},
 
     # Organize settings
     "switch_base_model": {"tr": "Tabana Göre (SDXL, Flux, Krea, Anima vb.)", "en": "By Base Model (SDXL, Flux, Krea, Anima etc.)", "ja": "ベースモデル別（SDXL、Flux、Krea、Animaなど）", "zh": "按基础模型分类（SDXL、Flux、Krea、Anima 等）"},
@@ -99,6 +101,8 @@ TRANSLATIONS = {
     # Log / status
     "status_label_prefix": {"tr": "Canlı İşlem Kaydı - Durum:", "en": "Live Process Log - Status:", "ja": "リアルタイム処理ログ - 状態：", "zh": "实时处理日志 - 状态："},
     "status_waiting": {"tr": "Bekliyor", "en": "Waiting", "ja": "待機中", "zh": "等待中"},
+    "btn_save_log": {"tr": "💾 Logu Kaydet", "en": "💾 Save Log", "ja": "💾 ログを保存", "zh": "💾 保存日志"},
+    "log_save_failed": {"tr": "Log dosyası kaydedilemedi.", "en": "Could not save the log file.", "ja": "ログファイルを保存できませんでした。", "zh": "无法保存日志文件。"},
     "status_running": {"tr": "İşlem Yapılıyor...", "en": "Processing...", "ja": "処理中...", "zh": "处理中..."},
     "status_done": {"tr": "Tamamlandı!", "en": "Completed!", "ja": "完了しました！", "zh": "已完成！"},
     "log_ready": {
