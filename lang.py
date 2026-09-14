@@ -34,6 +34,7 @@ TRANSLATIONS = {
     "tab_lora": {"tr": "🎨 LoRA Düzenle", "en": "🎨 Edit LoRAs", "ja": "🎨 LoRA整理", "zh": "🎨 整理 LoRA"},
     "tab_clean": {"tr": "🧹 Akıllı Temizlik", "en": "🧹 Smart Cleanup", "ja": "🧹 スマートクリーンアップ", "zh": "🧹 智能清理"},
     "tab_rename": {"tr": "🏷️ İsim & Trigger", "en": "🏷️ Rename & Triggers", "ja": "🏷️ 名前とトリガー", "zh": "🏷️ 重命名与触发词"},
+    "tab_duplicate": {"tr": "🧬 Kopya Bulucu", "en": "🧬 Duplicate Finder", "ja": "🧬 重複ファイル検出", "zh": "🧬 重复文件查找"},
 
     # Path pickers
     "folder_checkpoint": {"tr": "Düzenlenecek Checkpoint Klasörü:", "en": "Checkpoint Folder to Organize:", "ja": "整理するチェックポイントフォルダ：", "zh": "要整理的 Checkpoint 文件夹："},
@@ -81,6 +82,25 @@ TRANSLATIONS = {
     "rename_mode_all": {"tr": "Civitai Adından Farklı Olan Tümü", "en": "All That Differ From Civitai Title", "ja": "Civitaiのタイトルと異なるすべて", "zh": "所有与 Civitai 标题不同的文件"},
     "switch_fill_trigger": {"tr": "Eksik Trigger Word'leri Doldur (Civitai/örnek görsellerden)", "en": "Fill Missing Trigger Words (from Civitai / sample images)", "ja": "不足しているトリガーワードを補完（Civitai／サンプル画像から）", "zh": "补全缺失的触发词（来自 Civitai／示例图片）"},
     "btn_start_rename": {"tr": "▶ Yeniden Adlandır & Trigger Doldur", "en": "▶ Rename & Fill Triggers", "ja": "▶ リネーム＆トリガー補完を開始", "zh": "▶ 开始重命名并填充触发词"},
+
+    "dup_info_text": {
+        "tr": "Aynı dosya içeriğine (hash) sahip LoRA'ları bulur. Her grupta hangisinin tutulacağına şu sırayla karar verir: yanında Civitai bilgisi (.civitai.info) olan, ismi anlamlı olan, en sığ klasördeki. Diğerleri, ilişkili TÜM dosyalarıyla (.civitai.info, önizleme görselleri, .json vb.) birlikte çöp klasörüne taşınır — kalıcı silinmez.",
+        "en": "Finds LoRAs with identical file content (hash). In each group, decides which copy to keep in this order: the one with Civitai metadata (.civitai.info) next to it, the one with a meaningful filename, the one in the shallowest folder. The others are moved to the trash folder along with ALL their related files (.civitai.info, preview images, .json, etc.) - nothing is permanently deleted.",
+        "ja": "同一のファイル内容（ハッシュ）を持つLoRAを検出します。各グループで、次の順序でどのコピーを残すかを決定します：Civitaiメタデータ（.civitai.info）が付随しているもの、意味のあるファイル名のもの、最も浅いフォルダにあるもの。それ以外はすべての関連ファイル（.civitai.info、プレビュー画像、.jsonなど）とともにゴミ箱フォルダへ移動されます - 完全に削除されることはありません。",
+        "zh": "查找文件内容完全相同（哈希值相同）的 LoRA。在每组中，按以下顺序决定保留哪个副本：附带 Civitai 元数据（.civitai.info）的、文件名有意义的、位于最浅文件夹中的。其余的连同所有相关文件（.civitai.info、预览图片、.json 等）一起移动到回收站文件夹——不会被永久删除。",
+    },
+    "btn_start_duplicate": {"tr": "▶ Kopyaları Bul & Temizle", "en": "▶ Find & Clean Duplicates", "ja": "▶ 重複を検出してクリーンアップ", "zh": "▶ 查找并清理重复文件"},
+
+    "log_dup_hashing": {"tr": "[Hash] Tüm dosyalar taranıyor...", "en": "[Hash] Scanning all files...", "ja": "[ハッシュ] すべてのファイルをスキャン中...", "zh": "[哈希] 正在扫描所有文件..."},
+    "log_dup_groups_found": {"tr": "[Bilgi] {count} adet kopya grubu bulundu.", "en": "[Info] Found {count} duplicate group(s).", "ja": "[情報] {count}件の重複グループが見つかりました。", "zh": "[信息] 找到 {count} 个重复组。"},
+    "log_dup_group": {"tr": "   [🧬] Tutulan: {kept} — {count} kopya taşınıyor...", "en": "   [🧬] Kept: {kept} — moving {count} duplicate(s)...", "ja": "   [🧬] 保持：{kept} — {count}件の重複を移動中...", "zh": "   [🧬] 保留：{kept} — 正在移动 {count} 个重复文件..."},
+
+    "summary_text_duplicate": {
+        "tr": "✅ İşlem Başarıyla Tamamlandı!\n\n🧬 Bulunan Kopya Grubu: {groups}\n🗑️ Taşınan Kopya Dosya: {moved}\n🧹 Silinen Boş Klasör: {empty}",
+        "en": "✅ Operation Completed Successfully!\n\n🧬 Duplicate Groups Found: {groups}\n🗑️ Duplicate Files Moved: {moved}\n🧹 Empty Folders Deleted: {empty}",
+        "ja": "✅ 処理が正常に完了しました！\n\n🧬 検出された重複グループ数：{groups}\n🗑️ 移動された重複ファイル数：{moved}\n🧹 削除された空フォルダ数：{empty}",
+        "zh": "✅ 操作已成功完成！\n\n🧬 找到的重复组数：{groups}\n🗑️ 已移动的重复文件数：{moved}\n🧹 已删除的空文件夹数：{empty}",
+    },
 
     "log_rename_meaningless_skip": {"tr": "   [Atlandı] İsim zaten anlamlı görünüyor.", "en": "   [Skipped] Name already looks meaningful.", "ja": "   [スキップ] 名前は既に意味があるようです。", "zh": "   [已跳过] 文件名看起来已经有意义。"},
     "log_renamed_files": {"tr": "   [🏷️] Yeniden adlandırıldı: {old} -> {new}", "en": "   [🏷️] Renamed: {old} -> {new}", "ja": "   [🏷️] 名前変更：{old} -> {new}", "zh": "   [🏷️] 已重命名：{old} -> {new}"},
@@ -164,6 +184,7 @@ TRANSLATIONS = {
     "category_background": {"tr": "Arkaplan", "en": "Background", "ja": "背景", "zh": "背景"},
     "folder_old_versions": {"tr": "Eski_Surumler", "en": "Old_Versions", "ja": "古いバージョン", "zh": "旧版本"},
     "folder_low_rated": {"tr": "Dusuk_Puanlilar", "en": "Low_Rated", "ja": "低評価", "zh": "低评分"},
+    "folder_duplicates": {"tr": "Kopyalar", "en": "Duplicates", "ja": "重複ファイル", "zh": "重复文件"},
 
     "mode_checkpoint": {"tr": "checkpoint", "en": "checkpoint", "ja": "checkpoint", "zh": "checkpoint"},
     "mode_lora": {"tr": "lora", "en": "lora", "ja": "lora", "zh": "lora"},

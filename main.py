@@ -270,8 +270,14 @@ class LoraLibrarianApp(ctk.CTk):
         self.rn_chk_trigger = ctk.BooleanVar(value=True)
         self.rn_cakisma_mod = ctk.StringVar(value="rename")
 
+        # --- KOPYA BULUCU (DUPLICATE) ---
+        self.dup_kaynak = ctk.StringVar()
+        self.dup_hedef = ctk.StringVar()
+        self.dup_cakisma_mod = ctk.StringVar(value="rename")
+
         self.istatistik_yeniden_adlandirilan = 0
         self.istatistik_trigger_dolduruldu = 0
+        self.istatistik_kopya_grubu = 0
 
         self.istatistik_tasinan = 0
         self.istatistik_ayiklanan = 0
@@ -346,7 +352,7 @@ class LoraLibrarianApp(ctk.CTk):
         sidebar.grid(row=2, column=0, sticky="ns", padx=(16, 8), pady=(14, 8))
         sidebar.grid_propagate(False)
 
-        self._nav_items = [("cp", "tab_checkpoint"), ("lr", "tab_lora"), ("tm", "tab_clean"), ("rn", "tab_rename")]
+        self._nav_items = [("cp", "tab_checkpoint"), ("lr", "tab_lora"), ("tm", "tab_clean"), ("rn", "tab_rename"), ("dup", "tab_duplicate")]
         self.nav_buttons = {}
         for key, label_key in self._nav_items:
             btn = ctk.CTkButton(
@@ -372,13 +378,15 @@ class LoraLibrarianApp(ctk.CTk):
         self.tab_lr = ctk.CTkFrame(content_container, fg_color="transparent")
         self.tab_tm = ctk.CTkFrame(content_container, fg_color="transparent")
         self.tab_rn = ctk.CTkFrame(content_container, fg_color="transparent")
-        for frame in (self.tab_cp, self.tab_lr, self.tab_tm, self.tab_rn):
+        self.tab_dup = ctk.CTkFrame(content_container, fg_color="transparent")
+        for frame in (self.tab_cp, self.tab_lr, self.tab_tm, self.tab_rn, self.tab_dup):
             frame.grid(row=0, column=0, sticky="nsew")
 
         self.sekme_checkpoint_doldur()
         self.sekme_lora_doldur()
         self.sekme_temizle_doldur()
         self.sekme_rename_doldur()
+        self.sekme_duplicate_doldur()
 
         self.show_page(getattr(self, "current_page", "cp"))
 
@@ -409,7 +417,7 @@ class LoraLibrarianApp(ctk.CTk):
 
     def show_page(self, key):
         self.current_page = key
-        frames = {"cp": self.tab_cp, "lr": self.tab_lr, "tm": self.tab_tm, "rn": self.tab_rn}
+        frames = {"cp": self.tab_cp, "lr": self.tab_lr, "tm": self.tab_tm, "rn": self.tab_rn, "dup": self.tab_dup}
         frames[key].tkraise()
         for k, btn in self.nav_buttons.items():
             if k == key:
@@ -625,6 +633,28 @@ class LoraLibrarianApp(ctk.CTk):
         self.btn_rn = ctk.CTkButton(self.tab_rn, text=t("btn_start_rename", self.lang), corner_radius=CORNER_BTN, height=38, fg_color="#7a4a0b", hover_color="#996015", command=lambda: self.baslat_thread("rename"))
         self.btn_rn.pack(pady=20)
 
+    def sekme_duplicate_doldur(self):
+        self.yol_secici_ciz(self.tab_dup, self.dup_kaynak, self.dup_hedef, metin=t("folder_scan", self.lang))
+
+        info_frame = ctk.CTkFrame(self.tab_dup, fg_color=CARD_BG, corner_radius=CORNER_CARD, border_width=1, border_color=BORDER)
+        info_frame.pack(fill="x", padx=10, pady=(5, 10))
+        ctk.CTkLabel(info_frame, text=t("dup_info_text", self.lang), font=("Segoe UI", 10, "italic"), text_color=TEXT_MUTED, justify="left", wraplength=680).pack(anchor="w", padx=14, pady=14)
+
+        cakisma_frame = ctk.CTkFrame(self.tab_dup, fg_color="transparent")
+        cakisma_frame.pack(fill="x", padx=10, pady=5)
+        ctk.CTkLabel(cakisma_frame, text=t("conflict_trash_label", self.lang), font=("Segoe UI", 12, "bold")).pack(side="left", padx=10)
+        opt_dup = ctk.CTkOptionMenu(
+            cakisma_frame,
+            values=self._conflict_display_values(),
+            corner_radius=CORNER_BTN, fg_color=ACCENT, button_color=ACCENT, button_hover_color=ACCENT_HOVER,
+            command=lambda disp: self.dup_cakisma_mod.set(self._conflict_code_from_display(disp)),
+        )
+        opt_dup.set(self._conflict_display_from_code(self.dup_cakisma_mod.get()))
+        opt_dup.pack(side="left", padx=10)
+
+        self.btn_dup = ctk.CTkButton(self.tab_dup, text=t("btn_start_duplicate", self.lang), corner_radius=CORNER_BTN, height=38, fg_color="#9333ea", hover_color="#7c3aed", command=lambda: self.baslat_thread("duplicate"))
+        self.btn_dup.pack(pady=20)
+
     # ------------------------------------------------------------------
     # Settings persistence (Ayarlar / Settings)
     # ------------------------------------------------------------------
@@ -685,6 +715,12 @@ class LoraLibrarianApp(ctk.CTk):
                 self.rn_mode.set(d.get("mode", "meaningless"))
                 self.rn_chk_trigger.set(d.get("trigger", True))
                 self.rn_cakisma_mod.set(d.get("cakisma_mod", "rename"))
+
+            if "dup" in ayarlar:
+                d = ayarlar["dup"]
+                self.dup_kaynak.set(d.get("kaynak", ""))
+                self.dup_hedef.set(d.get("hedef", ""))
+                self.dup_cakisma_mod.set(d.get("cakisma_mod", "rename"))
         except Exception:
             pass
 
@@ -721,6 +757,9 @@ class LoraLibrarianApp(ctk.CTk):
             "rn": {
                 "kaynak": self.rn_kaynak.get(), "mode": self.rn_mode.get(),
                 "trigger": self.rn_chk_trigger.get(), "cakisma_mod": self.rn_cakisma_mod.get(),
+            },
+            "dup": {
+                "kaynak": self.dup_kaynak.get(), "hedef": self.dup_hedef.get(), "cakisma_mod": self.dup_cakisma_mod.get(),
             },
         }
         try:
@@ -1001,6 +1040,11 @@ class LoraLibrarianApp(ctk.CTk):
             config = {"mode": self.rn_mode.get(), "trigger": self.rn_chk_trigger.get(), "cakisma": self.rn_cakisma_mod.get()}
             if not kaynak:
                 return messagebox.showwarning(t("dialog_warning_title", self.lang), t("dialog_warning_no_folder", self.lang))
+        elif mod == "duplicate":
+            kaynak, hedef = self.dup_kaynak.get(), self.dup_hedef.get()
+            config = {"cakisma": self.dup_cakisma_mod.get()}
+            if not kaynak or not hedef:
+                return messagebox.showwarning(t("dialog_warning_title", self.lang), t("dialog_warning_no_scan_trash", self.lang))
         else:
             kaynak, hedef = self.tm_kaynak.get(), self.tm_hedef.get()
             config = {"puan": self.tm_chk_puan.get(), "min_p": self.tm_min_puan.get(), "eski": self.tm_chk_eski.get(), "cakisma": self.tm_cakisma_mod.get()}
@@ -1013,7 +1057,13 @@ class LoraLibrarianApp(ctk.CTk):
         self.btn_lr.configure(state="disabled")
         self.btn_tm.configure(state="disabled")
         self.btn_rn.configure(state="disabled")
-        motor = self.ana_motor_rename if mod == "rename" else self.ana_motor
+        self.btn_dup.configure(state="disabled")
+        if mod == "rename":
+            motor = self.ana_motor_rename
+        elif mod == "duplicate":
+            motor = self.ana_motor_duplicate
+        else:
+            motor = self.ana_motor
         threading.Thread(target=motor, args=(mod, kaynak, hedef, config), daemon=True).start()
 
     def ana_motor(self, mod, kaynak, hedef, config):
@@ -1215,6 +1265,7 @@ class LoraLibrarianApp(ctk.CTk):
         self.btn_lr.configure(state="normal")
         self.btn_tm.configure(state="normal")
         self.btn_rn.configure(state="normal")
+        self.btn_dup.configure(state="normal")
         messagebox.showinfo(t("dialog_report_title", self.lang), ozet_metni)
 
     # ------------------------------------------------------------------
@@ -1672,6 +1723,104 @@ class LoraLibrarianApp(ctk.CTk):
         self.btn_lr.configure(state="normal")
         self.btn_tm.configure(state="normal")
         self.btn_rn.configure(state="normal")
+        self.btn_dup.configure(state="normal")
+        messagebox.showinfo(t("dialog_report_title", self.lang), ozet_metni)
+
+    # ------------------------------------------------------------------
+    # Hash-based duplicate finder
+    # ------------------------------------------------------------------
+    def _kopya_tutma_skoru(self, root, file, kaynak):
+        """Lower score = better candidate to KEEP when several files
+        share the same content hash. Prefers, in order: a file that
+        already has Civitai metadata next to it, a file whose name
+        isn't hash/ID-like, and the shallowest path (closest to the
+        library root)."""
+        base = os.path.splitext(file)[0]
+        info_var = os.path.exists(os.path.join(root, base + ".civitai.info"))
+        anlamli = not is_meaningless_name(base)
+        try:
+            derinlik = len(os.path.relpath(root, kaynak).split(os.sep))
+        except Exception:
+            derinlik = 0
+        return (0 if info_var else 1, 0 if anlamli else 1, derinlik, file.lower())
+
+    def ana_motor_duplicate(self, mod, kaynak, hedef, config):
+        self.islem_devam_ediyor = True
+        self.istatistik_ayiklanan = 0
+        self.istatistik_bos_klasor = 0
+        self.istatistik_kopya_grubu = 0
+        self.progress_bar.set(0)
+        self.lbl_yuzde.configure(text="%0")
+        self.lbl_durum.configure(text=f'{t("status_label_prefix", self.lang)} {t("status_running", self.lang)}')
+
+        self.log_yaz(t("log_system_started", self.lang, mode="DUPLICATE"))
+
+        dosya_listesi = []
+        for root, dirs, files in os.walk(kaynak):
+            for file in files:
+                if file.endswith((".safetensors", ".ckpt", ".pt")):
+                    dosya_listesi.append((root, file))
+
+        toplam = len(dosya_listesi)
+        self.log_yaz(t("log_total_models", self.lang, count=toplam))
+        if toplam == 0:
+            self.log_yaz(t("log_dup_groups_found", self.lang, count=0))
+            self._motor_bitir_duplicate()
+            return
+
+        self.log_yaz(t("log_dup_hashing", self.lang))
+        hash_gruplari = {}
+        for index, (root, file) in enumerate(dosya_listesi):
+            yol = os.path.join(root, file)
+            try:
+                h = self.get_hash(yol)
+                hash_gruplari.setdefault(h, []).append((root, file))
+            except Exception:
+                pass
+            ilerleme = (index + 1) / toplam * 0.5
+            self.progress_bar.set(ilerleme)
+            self.lbl_yuzde.configure(text=f"%{int(ilerleme * 100)}")
+
+        self._hash_cache_kaydet()
+
+        kopya_gruplari = {h: v for h, v in hash_gruplari.items() if len(v) > 1}
+        self.istatistik_kopya_grubu = len(kopya_gruplari)
+        self.log_yaz(t("log_dup_groups_found", self.lang, count=len(kopya_gruplari)))
+
+        toplam_grup = len(kopya_gruplari)
+        for g_index, (h, dosyalar) in enumerate(kopya_gruplari.items()):
+            dosyalar_sirali = sorted(dosyalar, key=lambda item: self._kopya_tutma_skoru(item[0], item[1], kaynak))
+            tutulan = dosyalar_sirali[0]
+            kopyalar = dosyalar_sirali[1:]
+
+            self.log_yaz(t("log_dup_group", self.lang, kept=tutulan[1], count=len(kopyalar)))
+
+            for root, file in kopyalar:
+                self.dosyalari_tasi(file, root, os.path.join(hedef, t("folder_duplicates", self.lang)), config["cakisma"], "temizle")
+
+            ilerleme = 0.5 + ((g_index + 1) / toplam_grup * 0.5) if toplam_grup else 1.0
+            self.progress_bar.set(ilerleme)
+            self.lbl_yuzde.configure(text=f"%{int(ilerleme * 100)}")
+
+        self.bos_klasorleri_temizle(kaynak)
+        self._motor_bitir_duplicate()
+
+    def _motor_bitir_duplicate(self):
+        self._hash_cache_kaydet()
+        ozet_metni = t(
+            "summary_text_duplicate", self.lang,
+            groups=self.istatistik_kopya_grubu,
+            moved=self.istatistik_ayiklanan,
+            empty=self.istatistik_bos_klasor,
+        )
+        self.log_yaz(f'{t("log_summary_title", self.lang)}\n{ozet_metni}')
+        self.lbl_durum.configure(text=f'{t("status_label_prefix", self.lang)} {t("status_done", self.lang)}')
+        self.islem_devam_ediyor = False
+        self.btn_cp.configure(state="normal")
+        self.btn_lr.configure(state="normal")
+        self.btn_tm.configure(state="normal")
+        self.btn_rn.configure(state="normal")
+        self.btn_dup.configure(state="normal")
         messagebox.showinfo(t("dialog_report_title", self.lang), ozet_metni)
 
 

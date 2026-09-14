@@ -37,6 +37,11 @@ This file summarizes every change made since v1.4 in one place.
 - Ayar dosyası `LL-Settings.json` olarak yeniden adlandırıldı (Preview Smith ile aynı klasörde çakışmasın diye); eski `ayarlar.json` varsa ilk açılışta otomatik taşınıyor.
 - Her klasör alanı artık bir **geçmiş listesi** tutuyor; klasör simgesine tıklayınca son kullanılan klasörler listeleniyor, her birinin yanında kaldırma (🗑) seçeneği var.
 
+### 🧬 Yeni: Kopya Bulucu sekmesi
+- Dosya içeriğine (hash) göre birebir aynı LoRA'ları buluyor — isimler farklı olsa bile.
+- Her kopya grubunda hangi dosyanın tutulacağına şu sırayla karar veriyor: yanında Civitai bilgisi (`.civitai.info`) olan, ismi anlamlı olan, en sığ klasördeki.
+- Diğer kopyalar **ilişkili tüm dosyalarıyla birlikte** (`.civitai.info`, önizleme görselleri, `.json` vb.) çöp klasörüne taşınıyor — sıradan kopya bulucuların atladığı "yancı dosya" sorununu çözüyor. Kalıcı silme yapmıyor.
+
 ### 🖥️ Arayüz
 - Sekmeler arası geçişte önceki sekmenin butonlarının "ghosting" gibi ekranda kalması hatası düzeltildi.
 - Log paneli inceltildi (daha küçük font, daha ince ilerleme çubuğu, daha az boşluk) ve varsayılan pencere yüksekliği küçültüldü — daha küçük ekranlara sığması için.
@@ -75,6 +80,11 @@ This file summarizes every change made since v1.4 in one place.
 ### 📁 Folder and settings management
 - The settings file was renamed to `LL-Settings.json` (so it doesn't collide with Preview Smith in the same folder); an existing `ayarlar.json` is migrated automatically on first launch.
 - Every folder field now keeps a **history list**; clicking the folder icon shows recently used folders, each with a remove (🗑) option.
+
+### 🧬 New: Duplicate Finder tab
+- Finds byte-identical LoRAs by file content hash - even when the filenames are completely different.
+- In each duplicate group, decides which file to keep in this order: the one with Civitai metadata (`.civitai.info`) next to it, the one with a meaningful name, the one in the shallowest folder.
+- The other copies are moved to the trash folder **along with all their related files** (`.civitai.info`, preview images, `.json`, etc.) - solving the "orphaned companion file" problem that ordinary duplicate finders leave behind. Never permanently deletes.
 
 ### 🖥️ Interface
 - Fixed a "ghosting" bug where the previous tab's buttons remained visible on screen after switching tabs.
