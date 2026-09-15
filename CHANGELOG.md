@@ -7,6 +7,9 @@ This file summarizes every change made since v1.4 in one place.
 
 ## 🇹🇷 Türkçe
 
+### 📦 Derleme / Yanlış virüs uyarısı düzeltmesi
+- GitHub Actions derleme ayarı `--onefile`'dan `--onedir` + `--noupx`'e çevrildi — Windows Defender'ın PyInstaller `.exe` dosyalarını yanlışlıkla "Trojan:Win32/Wacatac.B!ml" olarak işaretlemesine (bilinen, çok yaygın bir yanlış pozitif) neden olan iki ana etken buydu. Artık release'ler tek `.exe` yerine bir `.zip` klasörü olarak yayınlanıyor.
+
 ### 🖼️ Kapak görseli ve NSFW modeller
 - Civitai API'ye artık `nsfw`/`browsingLevel` parametreleri gönderiliyor — daha önce NSFW işaretli modellerin örnek görselleri Civitai tarafından varsayılan olarak filtreleniyordu, bu yüzden trigger word/kapak çıkarımı bu modellerde sessizce başarısız oluyordu.
 - Kapak görseli indirirken artık dosyanın gerçek imzası (PNG/JPEG/WEBP başlığı) kontrol ediliyor; ağ engellemesi "200 başarılı" ama sahte içerik döndürürse artık bozuk dosya diske yazılmıyor.
@@ -50,6 +53,9 @@ This file summarizes every change made since v1.4 in one place.
 ---
 
 ## 🇬🇧 English
+
+### 📦 Build / False-positive virus warning fix
+- GitHub Actions build switched from `--onefile` to `--onedir` + `--noupx` - the two biggest contributors to Windows Defender falsely flagging PyInstaller `.exe` files as "Trojan:Win32/Wacatac.B!ml" (a well-known, very common false positive). Releases now ship as a `.zip` folder instead of a single `.exe`.
 
 ### 🖼️ Cover images and NSFW models
 - Civitai API calls now include `nsfw`/`browsingLevel` parameters — previously, NSFW-flagged models' sample images were filtered out by Civitai by default, so trigger-word/cover extraction silently failed for them.

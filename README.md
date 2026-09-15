@@ -35,6 +35,8 @@ python main.py
 
 Hazır `.exe` dosyasını indirmek isterseniz, sağdaki **Releases** bölümüne bakabilirsiniz.
 
+> ⚠️ **Windows Defender uyarısı hakkında:** PyInstaller ile derlenen Python programları, kendini geçici klasöre açma davranışı yüzünden bazen Defender tarafından yanlışlıkla "Trojan:Win32/Wacatac.B!ml" olarak işaretlenir — bu, PyInstaller tabanlı binlerce açık kaynak projede görülen bilinen bir yanlış pozitiftir, gerçek bir virüs değildir. Kaynak kodun tamamı bu depoda açık; isterseniz kendiniz derleyebilir ya da [dosyayı VirusTotal'da tarayabilirsiniz](https://www.virustotal.com/).
+
 ### Kullanım
 
 1. Üstteki API anahtarı alanına (opsiyonel) Civitai API anahtarınızı girin.
@@ -70,6 +72,8 @@ python main.py
 ```
 
 If you'd rather use a ready-made `.exe`, check the **Releases** section on the right.
+
+> ⚠️ **About the Windows Defender warning:** Python programs built with PyInstaller are sometimes flagged by Defender as "Trojan:Win32/Wacatac.B!ml" because of how they self-extract to a temp folder at startup - this is a well-known false positive seen across thousands of PyInstaller-based open-source projects, not an actual virus. The full source is right here in this repo; you're welcome to build it yourself, or [scan the file on VirusTotal](https://www.virustotal.com/).
 
 ### Usage
 
