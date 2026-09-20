@@ -145,24 +145,28 @@ def is_meaningless_name(name: str) -> bool:
         return True
     return False
 
-# Theme-aware color tuples: (light_mode, dark_mode) - a dark violet /
-# near-black palette with a purple-to-pink accent, plus a matching
+# Theme-aware color tuples: (light_mode, dark_mode) - a clean black/blue
+# palette (dark mode is near-black with a blue tint) with a matching
 # light-mode equivalent.
-BG_MAIN = ("#f4f2fa", "#0e0d15")
-BG_HEADER = ("#ffffff", "#131220")
-CARD_BG = ("#ffffff", "#17161f")
-SIDEBAR_BG = ("#ede9f7", "#121120")
-SIDEBAR_ITEM_HOVER = ("#e0d9f5", "#1e1c2c")
-SIDEBAR_TEXT = ("#3a3650", "#c9c6d9")
-BORDER = ("#e2ddf0", "#2a2838")
-LOG_BG = ("#efecf8", "#100f18")
-TEXT_MUTED = ("#6b6880", "#9c99ab")
+BG_MAIN = ("#f1f4f9", "#05070c")
+BG_HEADER = ("#ffffff", "#0a0e16")
+CARD_BG = ("#ffffff", "#0d1119")
+SIDEBAR_BG = ("#e7ecf5", "#070a10")
+SIDEBAR_ITEM_HOVER = ("#dbe3f1", "#131a26")
+SIDEBAR_TEXT = ("#31435c", "#a8b3c4")
+BORDER = ("#dde3ee", "#1c2432")
+LOG_BG = ("#eaeef5", "#04060a")
+TEXT_MUTED = ("#5c6b81", "#7d8aa0")
 
-ACCENT = "#8b5cf6"       # violet - sidebar selection, focus highlights
-ACCENT_HOVER = "#7c4ee8"
-GRADIENT_STOPS = ["#4f46e5", "#9333ea", "#ec4899"]  # indigo -> violet -> pink
+# A light "highlight" border on buttons approximates a raised/puffy,
+# subtly shadowed look, since CTk has no real drop-shadow support.
+BTN_BORDER = ("#ffffff", "#2a3547")
 
-CORNER_BTN = 10
+ACCENT = "#2f7bff"       # blue - sidebar selection, focus highlights, buttons
+ACCENT_HOVER = "#2569e0"
+GRADIENT_STOPS = ["#050814", "#1e3a8a", "#38bdf8"]  # near-black -> blue -> cyan
+
+CORNER_BTN = 14
 CORNER_CARD = 14
 CORNER_INPUT = 8
 
@@ -407,7 +411,7 @@ class LoraLibrarianApp(ctk.CTk):
                       fg_color="transparent", border_width=1, border_color=BORDER, text_color=SIDEBAR_TEXT,
                       hover_color=SIDEBAR_ITEM_HOVER, font=("Segoe UI", 11), command=self.log_dosyaya_kaydet).pack(side="right", padx=(0, 12))
 
-        self.progress_bar = ctk.CTkProgressBar(log_frame, progress_color=ACCENT, corner_radius=CORNER_INPUT, height=10)
+        self.progress_bar = ctk.CTkProgressBar(log_frame, progress_color=ACCENT, corner_radius=CORNER_INPUT, height=16)
         self.progress_bar.pack(fill="x", padx=14, pady=(6, 6))
         self.progress_bar.set(0)
 
@@ -446,13 +450,13 @@ class LoraLibrarianApp(ctk.CTk):
         ctk.CTkLabel(frame, text=metin, font=("Segoe UI", 11, "bold")).grid(row=0, column=0, sticky="w", padx=14, pady=(14, 0))
         ctk.CTkEntry(frame, textvariable=kaynak_var, width=480, corner_radius=CORNER_INPUT).grid(row=1, column=0, padx=14, pady=8, sticky="w")
         ctk.CTkButton(frame, text="🕘", width=36, corner_radius=CORNER_BTN, fg_color="transparent", border_width=1, border_color=BORDER, text_color=SIDEBAR_TEXT, hover_color=SIDEBAR_ITEM_HOVER, command=lambda v=kaynak_var: self.gecmis_penceresi_ac(v)).grid(row=1, column=1, pady=8, padx=(0, 6))
-        ctk.CTkButton(frame, text=t("browse", self.lang), width=90, corner_radius=CORNER_BTN, fg_color=ACCENT, hover_color=ACCENT_HOVER, command=lambda: self.klasor_sec(kaynak_var)).grid(row=1, column=2, pady=8, padx=(0, 14))
+        ctk.CTkButton(frame, text=t("browse", self.lang), width=90, height=34, corner_radius=CORNER_BTN, fg_color=ACCENT, hover_color=ACCENT_HOVER, border_width=2, border_color=BTN_BORDER, command=lambda: self.klasor_sec(kaynak_var)).grid(row=1, column=2, pady=8, padx=(0, 14))
 
         if hedef_var is not None:
             ctk.CTkLabel(frame, text=t("folder_trash", self.lang), font=("Segoe UI", 11, "bold")).grid(row=2, column=0, sticky="w", padx=14, pady=(10, 0))
             ctk.CTkEntry(frame, textvariable=hedef_var, width=480, corner_radius=CORNER_INPUT).grid(row=3, column=0, padx=14, pady=(8, 14), sticky="w")
             ctk.CTkButton(frame, text="🕘", width=36, corner_radius=CORNER_BTN, fg_color="transparent", border_width=1, border_color=BORDER, text_color=SIDEBAR_TEXT, hover_color=SIDEBAR_ITEM_HOVER, command=lambda v=hedef_var: self.gecmis_penceresi_ac(v)).grid(row=3, column=1, pady=(8, 14), padx=(0, 6))
-            ctk.CTkButton(frame, text=t("browse", self.lang), width=90, corner_radius=CORNER_BTN, fg_color=ACCENT, hover_color=ACCENT_HOVER, command=lambda: self.klasor_sec(hedef_var)).grid(row=3, column=2, pady=(8, 14), padx=(0, 14))
+            ctk.CTkButton(frame, text=t("browse", self.lang), width=90, height=34, corner_radius=CORNER_BTN, fg_color=ACCENT, hover_color=ACCENT_HOVER, border_width=2, border_color=BTN_BORDER, command=lambda: self.klasor_sec(hedef_var)).grid(row=3, column=2, pady=(8, 14), padx=(0, 14))
 
     def yaratici_menu_guncelle(self, kod, kutu):
         kutu.configure(state="normal" if kod == "list" else "disabled")
@@ -503,9 +507,9 @@ class LoraLibrarianApp(ctk.CTk):
         ust_frame = ctk.CTkFrame(parent, fg_color="transparent")
         ust_frame.pack(fill="x", padx=10, pady=5)
 
-        ctk.CTkSwitch(ust_frame, text=t("switch_base_model", self.lang), variable=chk_taban).grid(row=0, column=0, sticky="w", pady=5)
-        ctk.CTkSwitch(ust_frame, text=t("switch_fetch_meta", self.lang), variable=chk_resim).grid(row=0, column=1, sticky="w", padx=30, pady=5)
-        ctk.CTkSwitch(ust_frame, text=t("switch_category", self.lang), variable=chk_kategori).grid(row=1, column=0, columnspan=2, sticky="w", pady=10)
+        ctk.CTkSwitch(ust_frame, text=t("switch_base_model", self.lang), variable=chk_taban, progress_color=ACCENT).pack(anchor="w", pady=5)
+        ctk.CTkSwitch(ust_frame, text=t("switch_fetch_meta", self.lang), variable=chk_resim, progress_color=ACCENT).pack(anchor="w", pady=5)
+        ctk.CTkSwitch(ust_frame, text=t("switch_category", self.lang), variable=chk_kategori, progress_color=ACCENT).pack(anchor="w", pady=5)
 
         yaratici_frame = ctk.CTkFrame(parent, fg_color=CARD_BG, corner_radius=CORNER_CARD, border_width=1, border_color=BORDER)
         yaratici_frame.pack(fill="x", padx=10, pady=5)
@@ -526,7 +530,7 @@ class LoraLibrarianApp(ctk.CTk):
         opt.set(self._creator_display_from_code(yaratici_mod.get()))
         opt.grid(row=0, column=1, sticky="w", padx=14, pady=14)
 
-        ctk.CTkLabel(yaratici_frame, text=t("creator_hint", self.lang), font=("Segoe UI", 10, "italic"), text_color=TEXT_MUTED).grid(row=1, column=0, columnspan=2, sticky="w", padx=14, pady=(0, 5))
+        ctk.CTkLabel(yaratici_frame, text=t("creator_hint", self.lang), font=("Segoe UI", 10, "italic"), text_color=TEXT_MUTED, wraplength=700, justify="left").grid(row=1, column=0, columnspan=2, sticky="w", padx=14, pady=(0, 5))
 
         yaratici_kutu.grid(row=2, column=0, columnspan=2, padx=14, pady=(0, 14))
         yaratici_kutu.configure(state="normal" if yaratici_mod.get() == "list" else "disabled")
@@ -555,13 +559,13 @@ class LoraLibrarianApp(ctk.CTk):
     def sekme_checkpoint_doldur(self):
         self.yol_secici_ciz(self.tab_cp, self.cp_kaynak, metin=t("folder_checkpoint", self.lang))
         self.ayarlar_ciz(self.tab_cp, "cp")
-        self.btn_cp = ctk.CTkButton(self.tab_cp, text=t("btn_organize_checkpoint", self.lang), corner_radius=CORNER_BTN, height=38, fg_color="#2b7a0b", hover_color="#3e9915", command=lambda: self.baslat_thread("checkpoint"))
+        self.btn_cp = ctk.CTkButton(self.tab_cp, text=t("btn_organize_checkpoint", self.lang), corner_radius=CORNER_BTN, height=44, fg_color="#2b7a0b", hover_color="#3e9915", border_width=2, border_color=BTN_BORDER, command=lambda: self.baslat_thread("checkpoint"))
         self.btn_cp.pack(pady=10)
 
     def sekme_lora_doldur(self):
         self.yol_secici_ciz(self.tab_lr, self.lr_kaynak, metin=t("folder_lora", self.lang))
         self.ayarlar_ciz(self.tab_lr, "lr")
-        self.btn_lr = ctk.CTkButton(self.tab_lr, text=t("btn_organize_lora", self.lang), corner_radius=CORNER_BTN, height=38, fg_color="#0b5b7a", hover_color="#157199", command=lambda: self.baslat_thread("lora"))
+        self.btn_lr = ctk.CTkButton(self.tab_lr, text=t("btn_organize_lora", self.lang), corner_radius=CORNER_BTN, height=44, fg_color="#0b5b7a", hover_color="#157199", border_width=2, border_color=BTN_BORDER, command=lambda: self.baslat_thread("lora"))
         self.btn_lr.pack(pady=10)
 
     def sekme_temizle_doldur(self):
@@ -593,7 +597,7 @@ class LoraLibrarianApp(ctk.CTk):
         opt3.set(self._conflict_display_from_code(self.tm_cakisma_mod.get()))
         opt3.pack(side="left", padx=10)
 
-        self.btn_tm = ctk.CTkButton(self.tab_tm, text=t("btn_start_clean", self.lang), corner_radius=CORNER_BTN, height=38, fg_color="#b5261a", hover_color="#d63424", command=lambda: self.baslat_thread("temizle"))
+        self.btn_tm = ctk.CTkButton(self.tab_tm, text=t("btn_start_clean", self.lang), corner_radius=CORNER_BTN, height=44, fg_color="#b5261a", hover_color="#d63424", border_width=2, border_color=BTN_BORDER, command=lambda: self.baslat_thread("temizle"))
         self.btn_tm.pack(pady=20)
 
     def sekme_rename_doldur(self):
@@ -601,7 +605,7 @@ class LoraLibrarianApp(ctk.CTk):
 
         info_frame = ctk.CTkFrame(self.tab_rn, fg_color=CARD_BG, corner_radius=CORNER_CARD, border_width=1, border_color=BORDER)
         info_frame.pack(fill="x", padx=10, pady=(5, 10))
-        ctk.CTkLabel(info_frame, text=t("rename_info_text", self.lang), font=("Segoe UI", 10, "italic"), text_color=TEXT_MUTED, justify="left", wraplength=680).pack(anchor="w", padx=14, pady=14)
+        self._responsive_label_ciz(info_frame, "rename_info_text")
 
         opts_frame = ctk.CTkFrame(self.tab_rn, fg_color="transparent")
         opts_frame.pack(fill="x", padx=10, pady=5)
@@ -630,7 +634,7 @@ class LoraLibrarianApp(ctk.CTk):
         opt_rn2.set(self._conflict_display_from_code(self.rn_cakisma_mod.get()))
         opt_rn2.pack(side="left", padx=10)
 
-        self.btn_rn = ctk.CTkButton(self.tab_rn, text=t("btn_start_rename", self.lang), corner_radius=CORNER_BTN, height=38, fg_color="#7a4a0b", hover_color="#996015", command=lambda: self.baslat_thread("rename"))
+        self.btn_rn = ctk.CTkButton(self.tab_rn, text=t("btn_start_rename", self.lang), corner_radius=CORNER_BTN, height=44, fg_color="#7a4a0b", hover_color="#996015", border_width=2, border_color=BTN_BORDER, command=lambda: self.baslat_thread("rename"))
         self.btn_rn.pack(pady=20)
 
     def sekme_duplicate_doldur(self):
@@ -638,7 +642,7 @@ class LoraLibrarianApp(ctk.CTk):
 
         info_frame = ctk.CTkFrame(self.tab_dup, fg_color=CARD_BG, corner_radius=CORNER_CARD, border_width=1, border_color=BORDER)
         info_frame.pack(fill="x", padx=10, pady=(5, 10))
-        ctk.CTkLabel(info_frame, text=t("dup_info_text", self.lang), font=("Segoe UI", 10, "italic"), text_color=TEXT_MUTED, justify="left", wraplength=680).pack(anchor="w", padx=14, pady=14)
+        self._responsive_label_ciz(info_frame, "dup_info_text")
 
         cakisma_frame = ctk.CTkFrame(self.tab_dup, fg_color="transparent")
         cakisma_frame.pack(fill="x", padx=10, pady=5)
@@ -652,7 +656,7 @@ class LoraLibrarianApp(ctk.CTk):
         opt_dup.set(self._conflict_display_from_code(self.dup_cakisma_mod.get()))
         opt_dup.pack(side="left", padx=10)
 
-        self.btn_dup = ctk.CTkButton(self.tab_dup, text=t("btn_start_duplicate", self.lang), corner_radius=CORNER_BTN, height=38, fg_color="#9333ea", hover_color="#7c3aed", command=lambda: self.baslat_thread("duplicate"))
+        self.btn_dup = ctk.CTkButton(self.tab_dup, text=t("btn_start_duplicate", self.lang), corner_radius=CORNER_BTN, height=44, fg_color="#9333ea", hover_color="#7c3aed", border_width=2, border_color=BTN_BORDER, command=lambda: self.baslat_thread("duplicate"))
         self.btn_dup.pack(pady=20)
 
     # ------------------------------------------------------------------
@@ -789,6 +793,24 @@ class LoraLibrarianApp(ctk.CTk):
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+    def _responsive_label_ciz(self, parent, text_key, font=("Segoe UI", 9), padx=12, pady=8, **fmt):
+        """A label whose wrap width tracks its parent frame's actual
+        rendered width (minus padding), instead of a fixed pixel value.
+        A fixed wraplength either overflows the card (too wide for a
+        narrower window) or wastes vertical space (too narrow for a
+        wider one) - this keeps the text edge-to-edge and compact
+        without ever spilling past the card border."""
+        lbl = ctk.CTkLabel(parent, text=t(text_key, self.lang, **fmt), font=font, text_color=TEXT_MUTED, justify="left")
+        lbl.pack(anchor="w", fill="x", padx=padx, pady=pady)
+
+        def _guncelle(event, _lbl=lbl, _pad=padx):
+            genislik = max(200, event.width - (_pad * 2))
+            if _lbl.cget("wraplength") != genislik:
+                _lbl.configure(wraplength=genislik)
+
+        parent.bind("<Configure>", _guncelle)
+        return lbl
+
     def klasor_sec(self, degisken):
         yol = filedialog.askdirectory()
         if yol:
