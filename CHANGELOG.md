@@ -7,6 +7,13 @@ This file summarizes every change made since v1.4 in one place.
 
 ## 🇹🇷 Türkçe
 
+### 🔎 İsim tespiti ve trigger word iyileştirmeleri
+- `IL-vs-HMS2025SPK01_frockpt1_th-3.5` gibi ürün/parti kodu içeren isimler artık "anlamsız" sayılıyor (tek bir kod-benzeri parça tüm ismi işaretler).
+- `Ilus`, `IL`, `pony`, `v10`, `final` gibi taban model/sürüm/eğitim etiketleri bir ismi tek başına "anlamlı" yapmıyor; gerçek bir kelime yoksa isim anlamsız sayılıyor.
+- `Apollo11` gibi normal kelime + sondaki sayı isimleri yanlışlıkla leetspeak sayılmıyor (rakam yoğunluğuna bakılıyor).
+- **Tek kelimelik trigger word'ler artık akıllıca tamamlanıyor:** Civitai'nin verdiği trigger tek, birleşik bir kelimeyse (ör. `pinkcamisoledress`), örnek görsellerin komutlarında ya da modelin etiketlerinde bunun boşluklu hâli (`pink camisole dress`) aranıp trigger word'e ekleniyor — çünkü modeller genelde ikisine de tepki verecek şekilde eğitiliyor, sadece birleşik hâli prompt'a yazmak LoRA'yı zayıf çalıştırabiliyor.
+- Zaten 2 kelime veya daha uzun bir trigger word'ü olan LoRA'lara artık hiç dokunulmuyor (ne API isteği ne de dosya değişikliği) — sadece eksik ya da tek kelimelik olanlar işleniyor.
+
 ### 📦 Derleme / Yanlış virüs uyarısı düzeltmesi
 - GitHub Actions derleme ayarı `--onefile`'dan `--onedir` + `--noupx`'e çevrildi — Windows Defender'ın PyInstaller `.exe` dosyalarını yanlışlıkla "Trojan:Win32/Wacatac.B!ml" olarak işaretlemesine (bilinen, çok yaygın bir yanlış pozitif) neden olan iki ana etken buydu. Artık release'ler tek `.exe` yerine bir `.zip` klasörü olarak yayınlanıyor.
 
@@ -53,6 +60,13 @@ This file summarizes every change made since v1.4 in one place.
 ---
 
 ## 🇬🇧 English
+
+### 🔎 Name detection and trigger-word improvements
+- Names containing an internal product/batch code such as `IL-vs-HMS2025SPK01_frockpt1_th-3.5` are now treated as meaningless (a single code-like token flags the whole name).
+- Base-model/version/training tags like `Ilus`, `IL`, `pony`, `v10`, `final` no longer make a name "meaningful" on their own; without a real word the name counts as meaningless.
+- Ordinary word + trailing number names like `Apollo11` are no longer mistaken for leetspeak (digit density is used).
+- **Single-word trigger words are now smartly expanded:** if Civitai's trigger is a single run-together word (e.g. `pinkcamisoledress`), the spaced-out form (`pink camisole dress`) is searched for in sample-image prompts or the model's own tags and added alongside it - since LoRAs are usually trained to respond to both, and prompting with only the compact form can under-activate it.
+- LoRAs that already have a trigger word of 2+ words are now left completely untouched (no API call, no file change) - only missing or single-word triggers are processed.
 
 ### 📦 Build / False-positive virus warning fix
 - GitHub Actions build switched from `--onefile` to `--onedir` + `--noupx` - the two biggest contributors to Windows Defender falsely flagging PyInstaller `.exe` files as "Trojan:Win32/Wacatac.B!ml" (a well-known, very common false positive). Releases now ship as a `.zip` folder instead of a single `.exe`.

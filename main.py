@@ -83,11 +83,16 @@ _MEANINGLESS_PATTERNS = [
 # Civitai title even in "meaningless only" mode.
 _CJK_PATTERN = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
 
-# A token that's just letters followed by digits (optionally with
-# decimals) to the very end - "v10", "V1", "v0.5", "XL2", "SD1.5",
-# "aidmaMJ6.1" - is a normal version/base-model tag, not an obfuscated
-# or coded fragment, and should never trip the checks below.
-_VERSION_TOKEN_RE = re.compile(r"^[A-Za-z]+\d+(\.\d+)*$")
+# A token that's a SHORT letter prefix followed by digits (optionally
+# with decimals) to the very end - "v10", "V1", "v0.5", "XL2", "SD1.5"
+# - is a normal version/base-model tag, not an obfuscated or coded
+# fragment. The prefix is capped at 3 letters deliberately: real
+# version/base-model tags are short (v, SD, XL...), whereas a longer
+# word-like prefix in front of trailing digits (e.g. "frockpt1") is
+# still ordinary descriptive text and must NOT be excluded from the
+# digit-ratio check below, or a genuinely coded fragment elsewhere in
+# the same name (e.g. "HMS2025SPK01") can slip under the threshold.
+_VERSION_TOKEN_RE = re.compile(r"^[A-Za-z]{1,3}\d+(\.\d+)*$")
 
 # Leetspeak digit substitutions in common use (0=o, 1=i/l, 3=e, 4=a,
 # 5=s, 7=t). A token using ONLY these digits, with at least one digit
@@ -98,13 +103,58 @@ _VERSION_TOKEN_RE = re.compile(r"^[A-Za-z]+\d+(\.\d+)*$")
 _LEET_DIGITS = set("013457")
 
 
-def _leetspeak_gibi_mi(token: str) -> bool:
+def _leetspeak_gibi_mi(token: str, esik: float = 0.35) -> bool:
+    """Digit density, not digit position, is what actually separates
+    real names like 'Apollo11' or 'Take2' (a normal word with an
+    ordinary trailing number) from leetspeak like '4d41' or 'M1n1'
+    (mostly digits standing in for letters). An earlier position-based
+    check ('is any digit not the very last character') flagged
+    'Apollo11' too, since its second '1' isn't technically the final
+    character - density avoids that false positive."""
     if len(token) < 4 or _VERSION_TOKEN_RE.match(token) or not re.search(r"[A-Za-z]", token):
         return False
     digits = [c for c in token if c.isdigit()]
     if len(digits) < 2 or not all(d in _LEET_DIGITS for d in digits):
         return False
-    return any(c.isdigit() and 0 < i < len(token) - 1 for i, c in enumerate(token))
+    return (len(digits) / len(token)) >= esik
+
+
+# Tokens that describe the base model, version or training tool rather
+# than the subject of the LoRA. They never count as a "real word".
+_NOISE_TOKENS = {
+    "il", "ilus", "illus", "illust", "illustrious", "noob", "noobai", "pony", "pdxl",
+    "xl", "sdxl", "sd", "flux", "krea", "anima", "chroma", "lora", "lycoris", "lokr",
+    "loha", "dora", "model", "final", "last", "test", "new", "trained", "train",
+    "epoch", "step", "steps", "fp16", "fp32", "bf16", "safetensors", "ckpt", "vs",
+    "th", "pt", "part", "ver", "version", "ta", "best", "fix", "fixed", "hires", "lowres",
+}
+_VOWELS = set("aeiouyAEIOUYıİöÖüÜâêîôûàáèéìíòóùúäëï")
+
+
+def _gercek_kelime_mi(tok: str) -> bool:
+    core = re.sub(r"\d+$", "", tok)
+    if len(core) < 3 or not core.isalpha():
+        return False
+    if not core.isascii():
+        return True  # another script (Cyrillic, etc.) - assume a real word
+    if core.lower() in _NOISE_TOKENS:
+        return False
+    return any(c in _VOWELS for c in core)
+
+
+def _kod_gibi_token_mu(token: str, esik: float = 0.3) -> bool:
+    """A single token that mixes letters and digits at a high enough
+    density (e.g. 'HMS2025SPK01') reads as an internal product/batch
+    code rather than a descriptive word, regardless of what the OTHER
+    tokens in the same filename look like - so this is checked per
+    token, not just as an overall-name ratio (which a code fragment
+    sitting next to a few real words can dilute below threshold)."""
+    if len(token) < 6 or _VERSION_TOKEN_RE.match(token):
+        return False
+    if not re.search(r"[A-Za-z]", token) or not re.search(r"\d", token):
+        return False
+    digits = sum(1 for c in token if c.isdigit())
+    return (digits / len(token)) >= esik
 
 
 def _isim_rakam_orani_yuksek_mi(name: str, esik: float = 0.45) -> bool:
@@ -139,9 +189,19 @@ def is_meaningless_name(name: str) -> bool:
     # that are mostly digits once version tags are excluded (e.g.
     # "2434_6_soci24") aren't readable titles either, even though they
     # contain letters and don't match the fixed ID patterns above.
-    if any(_leetspeak_gibi_mi(tok) for tok in re.split(r"[ _\-]+", name)):
+    tokenlar = re.split(r"[ _\-]+", name)
+    if any(_leetspeak_gibi_mi(tok) for tok in tokenlar):
+        return True
+    if any(_kod_gibi_token_mu(tok) for tok in tokenlar):
         return True
     if _isim_rakam_orani_yuksek_mi(name):
+        return True
+    # Finally: a name is only "meaningful" if at least one token is a
+    # real word once base-model / version / training-tool tags are set
+    # aside. Just containing "Ilus", "IL", "pony", "v10" or "final"
+    # doesn't make a name meaningful - those tags say nothing about
+    # what the LoRA actually is.
+    if not any(_gercek_kelime_mi(tok) for tok in re.split(r"[ _\-.]+", name)):
         return True
     return False
 
@@ -272,6 +332,7 @@ class LoraLibrarianApp(ctk.CTk):
         self.rn_kaynak = ctk.StringVar()
         self.rn_mode = ctk.StringVar(value="meaningless")
         self.rn_chk_trigger = ctk.BooleanVar(value=True)
+        self.rn_chk_samples = ctk.BooleanVar(value=True)
         self.rn_cakisma_mod = ctk.StringVar(value="rename")
 
         # --- KOPYA BULUCU (DUPLICATE) ---
@@ -620,7 +681,8 @@ class LoraLibrarianApp(ctk.CTk):
         opt_rn.set(self._rename_mode_display_from_code(self.rn_mode.get()))
         opt_rn.grid(row=0, column=1, sticky="w", padx=10, pady=10)
 
-        ctk.CTkSwitch(opts_frame, text=t("switch_fill_trigger", self.lang), variable=self.rn_chk_trigger, progress_color=ACCENT).grid(row=1, column=0, columnspan=2, sticky="w", pady=10)
+        ctk.CTkSwitch(opts_frame, text=t("switch_fill_trigger", self.lang), variable=self.rn_chk_trigger, progress_color=ACCENT).grid(row=1, column=0, columnspan=2, sticky="w", pady=(10, 4))
+        ctk.CTkSwitch(opts_frame, text=t("switch_use_samples", self.lang), variable=self.rn_chk_samples, progress_color=ACCENT).grid(row=2, column=0, columnspan=2, sticky="w", pady=(4, 10))
 
         cakisma_frame = ctk.CTkFrame(self.tab_rn, fg_color="transparent")
         cakisma_frame.pack(fill="x", padx=10, pady=5)
@@ -718,6 +780,7 @@ class LoraLibrarianApp(ctk.CTk):
                 self.rn_kaynak.set(d.get("kaynak", ""))
                 self.rn_mode.set(d.get("mode", "meaningless"))
                 self.rn_chk_trigger.set(d.get("trigger", True))
+                self.rn_chk_samples.set(d.get("samples", True))
                 self.rn_cakisma_mod.set(d.get("cakisma_mod", "rename"))
 
             if "dup" in ayarlar:
@@ -760,7 +823,7 @@ class LoraLibrarianApp(ctk.CTk):
             },
             "rn": {
                 "kaynak": self.rn_kaynak.get(), "mode": self.rn_mode.get(),
-                "trigger": self.rn_chk_trigger.get(), "cakisma_mod": self.rn_cakisma_mod.get(),
+                "trigger": self.rn_chk_trigger.get(), "samples": self.rn_chk_samples.get(), "cakisma_mod": self.rn_cakisma_mod.get(),
             },
             "dup": {
                 "kaynak": self.dup_kaynak.get(), "hedef": self.dup_hedef.get(), "cakisma_mod": self.dup_cakisma_mod.get(),
@@ -1059,7 +1122,7 @@ class LoraLibrarianApp(ctk.CTk):
         elif mod == "rename":
             kaynak = self.rn_kaynak.get()
             hedef = kaynak
-            config = {"mode": self.rn_mode.get(), "trigger": self.rn_chk_trigger.get(), "cakisma": self.rn_cakisma_mod.get()}
+            config = {"mode": self.rn_mode.get(), "trigger": self.rn_chk_trigger.get(), "samples": self.rn_chk_samples.get(), "cakisma": self.rn_cakisma_mod.get()}
             if not kaynak:
                 return messagebox.showwarning(t("dialog_warning_title", self.lang), t("dialog_warning_no_folder", self.lang))
         elif mod == "duplicate":
@@ -1557,18 +1620,21 @@ class LoraLibrarianApp(ctk.CTk):
         return ""
         return ", ".join(sonuc[:20])
 
-    def _trigger_dosyalarini_guncelle(self, root, base_adi, trigger_metni):
-        """Write the trigger words to both common conventions, without
-        ever overwriting something that's already there:
+    def _trigger_dosyalarini_guncelle(self, root, base_adi, trigger_metni, zorla=False):
+        """Write the trigger words to both common conventions:
         1) <base>.civitai.info -> "trainedWords" list (if the file exists)
         2) <base>.json -> "activation text" (the field A1111/Forge's
-           built-in Lora card reads for 'Insert trigger words')."""
+           built-in Lora card reads for 'Insert trigger words').
+        By default this never overwrites something already there. Pass
+        zorla=True to deliberately replace an existing weak single-word
+        trigger with an enriched one (see _bilesik_kelime_ayristir) -
+        that's still an intentional improvement, not random overwrite."""
         info_path = os.path.join(root, base_adi + ".civitai.info")
         if os.path.exists(info_path):
             try:
                 with open(info_path, "r", encoding="utf-8") as f:
                     veri = json.load(f)
-                if not veri.get("trainedWords"):
+                if zorla or not veri.get("trainedWords"):
                     veri["trainedWords"] = [w.strip() for w in trigger_metni.split(",") if w.strip()]
                     with open(info_path, "w", encoding="utf-8") as f:
                         json.dump(veri, f, indent=4, ensure_ascii=False)
@@ -1581,12 +1647,50 @@ class LoraLibrarianApp(ctk.CTk):
             if os.path.exists(json_path):
                 with open(json_path, "r", encoding="utf-8") as f:
                     meta = json.load(f)
-            if not meta.get("activation text"):
+            if zorla or not meta.get("activation text"):
                 meta["activation text"] = trigger_metni
                 with open(json_path, "w", encoding="utf-8") as f:
                     json.dump(meta, f, indent=4, ensure_ascii=False)
         except Exception:
             pass
+
+    def _bilesik_kelime_ayristir(self, kelime, images, tags):
+        """A single official trigger word that's really several words
+        run together (e.g. Civitai's trainedWords is just
+        'pinkcamisoledress') often isn't enough on its own - the model
+        was also trained on the spaced-out phrase, and prompting with
+        only the compact form can under-activate it. Search sample-image
+        prompts (then the model's own tags) for a phrase that collapses
+        to the exact same letters, and return that spaced form if found -
+        so both get written, e.g. 'pinkcamisoledress, pink camisole dress'."""
+        hedef = re.sub(r"[^a-z0-9]", "", kelime.lower())
+        if len(hedef) < 8:
+            return ""
+
+        adaylar = []
+        for img in images or []:
+            prompt = (img.get("meta") or {}).get("prompt") or ""
+            prompt = re.sub(r"<lora:[^>]+>", "", prompt, flags=re.IGNORECASE)
+            for parca in prompt.split(","):
+                parca = re.sub(r"^\(+|\)+$", "", parca.strip())
+                parca = re.sub(r":\s*[\d.]+$", "", parca).strip()
+                if " " in parca and re.sub(r"[^a-z0-9]", "", parca.lower()) == hedef:
+                    adaylar.append(parca)
+        for tag in tags or []:
+            isim = tag if isinstance(tag, str) else (tag.get("name") if isinstance(tag, dict) else None)
+            if isim and " " in isim and re.sub(r"[^a-z0-9]", "", isim.lower()) == hedef:
+                adaylar.append(isim.strip())
+
+        if not adaylar:
+            return ""
+        sayac = {}
+        for a in adaylar:
+            sayac[a.lower()] = sayac.get(a.lower(), 0) + 1
+        en_sik = max(sayac, key=sayac.get)
+        for a in adaylar:
+            if a.lower() == en_sik:
+                return a
+        return ""
 
     def ana_motor_rename(self, mod, kaynak, hedef, config):
         self.islem_devam_ediyor = True
@@ -1674,24 +1778,31 @@ class LoraLibrarianApp(ctk.CTk):
                     self.log_yaz(t("log_rename_meaningless_skip", self.lang))
 
             if config["trigger"]:
-                mevcut_trigger = "".join(trained_words) if trained_words else ""
-                if not mevcut_trigger:
+                # What's already saved, as a list - trainedWords first
+                # (authoritative), else whatever's already written to
+                # the .json "activation text" field.
+                if trained_words:
+                    mevcut_liste = [str(w).strip() for w in trained_words if str(w).strip()]
+                else:
+                    mevcut_liste = []
                     json_path = os.path.join(root, base_adi + ".json")
                     if os.path.exists(json_path):
                         try:
                             with open(json_path, "r", encoding="utf-8") as f:
-                                mevcut_trigger = (json.load(f) or {}).get("activation text", "")
+                                mevcut_metin = (json.load(f) or {}).get("activation text", "")
+                            mevcut_liste = [w.strip() for w in mevcut_metin.split(",") if w.strip()]
                         except Exception:
-                            mevcut_trigger = ""
+                            mevcut_liste = []
 
-                if mevcut_trigger:
+                if len(mevcut_liste) >= 2:
+                    # Already has a real multi-word trigger phrase - make
+                    # sure it's actually saved to the .json activation-text
+                    # file (harmless no-op if it already is), but skip all
+                    # the extra API/sample-image work entirely.
+                    self._trigger_dosyalarini_guncelle(root, base_adi, ", ".join(mevcut_liste))
                     self.log_yaz(t("log_trigger_already", self.lang))
-                elif trained_words:
-                    kelimeler = ", ".join(trained_words)
-                    self._trigger_dosyalarini_guncelle(root, base_adi, kelimeler)
-                    self.log_yaz(t("log_trigger_from_api", self.lang, words=kelimeler))
-                    self.istatistik_trigger_dolduruldu += 1
                 else:
+                    aciklama_metni = ""
                     if m_id:
                         try:
                             r2 = self.session.get(f"https://{API_DOMAIN}/api/v1/models/{m_id}", headers=headers, params=CIVITAI_CONTENT_PARAMS, timeout=10)
@@ -1701,29 +1812,53 @@ class LoraLibrarianApp(ctk.CTk):
                                     tags = model_ust_veri.get("tags") or []
                                 aciklama_metni = model_ust_veri.get("description", "")
                             else:
-                                aciklama_metni = ""
                                 self.log_yaz(t("log_api_failed_detail", self.lang, status=r2.status_code))
                         except Exception as e:
-                            aciklama_metni = ""
                             self.log_yaz(t("log_api_failed_detail", self.lang, status=str(e)))
                     else:
-                        aciklama_metni = ""
                         self.log_yaz(t("log_no_model_id", self.lang))
 
-                    kelimeler = self._trigger_kelimeleri_cikar(images, tags=tags)
-                    kaynak_aciklama = False
-                    if not kelimeler and aciklama_metni:
-                        kelimeler = self._aciklamadan_trigger_cikar(aciklama_metni)
-                        kaynak_aciklama = bool(kelimeler)
-                    if kelimeler:
-                        self._trigger_dosyalarini_guncelle(root, base_adi, kelimeler)
-                        if kaynak_aciklama:
-                            self.log_yaz(t("log_trigger_from_description", self.lang, words=kelimeler))
+                    if len(mevcut_liste) == 1:
+                        # A single word/phrase already exists (often
+                        # Civitai's own trainedWords) but a lone compact
+                        # word like "pinkcamisoledress" frequently isn't
+                        # enough to reliably activate the LoRA - look
+                        # for the spaced-out form in sample prompts/tags
+                        # and add it alongside, without touching
+                        # anything that already has 2+ words.
+                        tek_kelime = mevcut_liste[0]
+                        ayrisik = self._bilesik_kelime_ayristir(tek_kelime, images, tags) if config.get("samples") else ""
+                        if ayrisik and ayrisik.lower() != tek_kelime.lower():
+                            kelimeler = f"{tek_kelime}, {ayrisik}"
+                            self._trigger_dosyalarini_guncelle(root, base_adi, kelimeler, zorla=True)
+                            self.log_yaz(t("log_trigger_augmented", self.lang, original=tek_kelime, added=ayrisik))
+                            self.istatistik_trigger_dolduruldu += 1
                         else:
-                            self.log_yaz(t("log_trigger_extracted", self.lang, words=kelimeler))
-                        self.istatistik_trigger_dolduruldu += 1
+                            self.log_yaz(t("log_trigger_single_kept", self.lang, word=tek_kelime))
                     else:
-                        self.log_yaz(t("log_trigger_none_found", self.lang))
+                        # Nothing usable saved yet - run the full
+                        # extraction pipeline (sample images -> tag
+                        # boost -> description).
+                        kelimeler = self._trigger_kelimeleri_cikar(images, tags=tags) if config.get("samples") else ""
+                        kaynak_aciklama = False
+                        if not kelimeler and aciklama_metni:
+                            kelimeler = self._aciklamadan_trigger_cikar(aciklama_metni)
+                            kaynak_aciklama = bool(kelimeler)
+
+                        if kelimeler:
+                            parcalar = [k.strip() for k in kelimeler.split(",") if k.strip()]
+                            if len(parcalar) == 1 and config.get("samples"):
+                                ayrisik = self._bilesik_kelime_ayristir(parcalar[0], images, tags)
+                                if ayrisik and ayrisik.lower() != parcalar[0].lower():
+                                    kelimeler = f"{parcalar[0]}, {ayrisik}"
+                            self._trigger_dosyalarini_guncelle(root, base_adi, kelimeler)
+                            if kaynak_aciklama:
+                                self.log_yaz(t("log_trigger_from_description", self.lang, words=kelimeler))
+                            else:
+                                self.log_yaz(t("log_trigger_extracted", self.lang, words=kelimeler))
+                            self.istatistik_trigger_dolduruldu += 1
+                        else:
+                            self.log_yaz(t("log_trigger_none_found", self.lang))
 
             ilerleme_orani = (index + 1) / toplam_model if toplam_model > 0 else 1
             self.progress_bar.set(ilerleme_orani)

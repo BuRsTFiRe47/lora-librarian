@@ -81,6 +81,7 @@ TRANSLATIONS = {
     "rename_mode_meaningless": {"tr": "Sadece Anlamsız İsimler", "en": "Meaningless Names Only", "ja": "意味のない名前のみ", "zh": "仅无意义的文件名"},
     "rename_mode_all": {"tr": "Civitai Adından Farklı Olan Tümü", "en": "All That Differ From Civitai Title", "ja": "Civitaiのタイトルと異なるすべて", "zh": "所有与 Civitai 标题不同的文件"},
     "switch_fill_trigger": {"tr": "Eksik Trigger Word'leri Doldur (Civitai/örnek görsellerden)", "en": "Fill Missing Trigger Words (from Civitai / sample images)", "ja": "不足しているトリガーワードを補完（Civitai／サンプル画像から）", "zh": "补全缺失的触发词（来自 Civitai／示例图片）"},
+    "switch_use_samples": {"tr": "Örnek görsellerden de çıkarım yap (sadece eksik/tek kelimelik trigger'lara dokunur)", "en": "Also infer from sample images (only touches missing/single-word triggers)", "ja": "サンプル画像からも推測する（不足している/単語のみのトリガーにのみ作用）", "zh": "同时从示例图片中推断（仅影响缺失或单词触发词）"},
     "btn_start_rename": {"tr": "▶ Yeniden Adlandır & Trigger Doldur", "en": "▶ Rename & Fill Triggers", "ja": "▶ リネーム＆トリガー補完を開始", "zh": "▶ 开始重命名并填充触发词"},
 
     "dup_info_text": {
@@ -108,7 +109,9 @@ TRANSLATIONS = {
     "log_trigger_from_description": {"tr": "   [🔑] Model açıklamasından bulundu: {words}", "en": "   [🔑] Found in the model description: {words}", "ja": "   [🔑] モデルの説明文から検出：{words}", "zh": "   [🔑] 在模型描述中找到：{words}"},
     "log_trigger_extracted": {"tr": "   [🔑] Örnek görsellerden çıkarıldı: {words}", "en": "   [🔑] Extracted from sample images: {words}", "ja": "   [🔑] サンプル画像から抽出：{words}", "zh": "   [🔑] 已从示例图片中提取：{words}"},
     "log_trigger_none_found": {"tr": "   [–] Trigger word bulunamadı (örnek görsel/veri yetersiz).", "en": "   [–] No trigger word could be found (insufficient sample data).", "ja": "   [–] トリガーワードが見つかりませんでした（サンプルデータ不足）。", "zh": "   [–] 未能找到触发词（示例数据不足）。"},
-    "log_trigger_already": {"tr": "   [–] Trigger word zaten mevcut, atlandı.", "en": "   [–] Trigger word already present, skipped.", "ja": "   [–] トリガーワードは既に存在するためスキップしました。", "zh": "   [–] 触发词已存在，已跳过。"},
+    "log_trigger_already": {"tr": "   [–] Trigger word zaten yeterli (2+ kelime), dokunulmadı.", "en": "   [–] Trigger word already sufficient (2+ words), left untouched.", "ja": "   [–] トリガーワードは既に十分です（2単語以上）、変更していません。", "zh": "   [–] 触发词已经足够（2个以上单词），未作改动。"},
+    "log_trigger_augmented": {"tr": "   [🔑] '{original}' tek başına yetersiz, yanına eklendi: {added}", "en": "   [🔑] '{original}' alone was likely too weak, added alongside it: {added}", "ja": "   [🔑] '{original}' 単体では弱い可能性があるため、併記しました：{added}", "zh": "   [🔑] 仅 '{original}' 可能不够，已一并添加：{added}"},
+    "log_trigger_single_kept": {"tr": "   [–] Tek kelimelik trigger ('{word}') için genişletilmiş hâli bulunamadı, dokunulmadı.", "en": "   [–] Could not find an expanded form for the single-word trigger ('{word}'), left as is.", "ja": "   [–] 単語のみのトリガー（'{word}'）の展開形が見つからなかったため、そのままにしました。", "zh": "   [–] 未能找到单词触发词（'{word}'）的展开形式，保持不变。"},
     "log_no_metadata": {"tr": "   [!] Civitai verisi bulunamadı, atlandı.", "en": "   [!] No Civitai data found, skipped.", "ja": "   [!] Civitaiのデータが見つからないためスキップしました。", "zh": "   [!] 未找到 Civitai 数据，已跳过。"},
 
     "summary_text_rename": {
