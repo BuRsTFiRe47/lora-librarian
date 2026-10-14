@@ -31,7 +31,7 @@ from tkinter import filedialog, messagebox
 from lang import t
 from base_models import normalize_base_model
 
-APP_VERSION = "2.0.0"
+APP_VERSION = "2.0.1"
 API_DOMAIN = "civitai.red"
 
 # By default Civitai's API only returns SFW sample images for a model
@@ -1418,6 +1418,9 @@ class LoraLibrarianApp(ctk.CTk):
             "photorealistic", "hyperrealistic", "realistic", "perfect anatomy", "perfect hands",
             "trending on artstation", "art by", "detailed background", "official art", "8k wallpaper",
             "very aesthetic", "amazing quality", "newest", "anime coloring", "anime screencap",
+            "wallpaper", "absurdres", "official art", "masterpiece portrait",
+            "vibrant colors", "dramatic lighting", "ambient particles", "high detail",
+            "high saturation", "perfect image", "blurry background", "ultra detailed",
             # generic subject count / composition
             "1girl", "1boy", "2girls", "2boys", "solo", "duo",
             "looking at viewer", "looking back", "looking away", "from side", "from behind",
@@ -1443,6 +1446,33 @@ class LoraLibrarianApp(ctk.CTk):
         # the character, never the costume.
         _hair_eye_pattern = re.compile(r"^(black|blonde|blond|brown|red|white|silver|grey|gray|pink|blue|purple|violet|green|orange|multicolored|two-tone|gradient|dark|light)\s+(hair|eyes)$")
 
+        # Generic "<adjective> <render-quality noun>" boilerplate (e.g.
+        # "vibrant colors", "dramatic lighting", "ambient particles",
+        # "high detail", "high saturation", "perfect image"). This is
+        # the exact style of junk many image-generation front-ends/
+        # checkpoints append to every single sample prompt, so it isn't
+        # just repeated often enough to clear the repetition threshold -
+        # it's often THE ONLY thing that repeats, drowning out any real
+        # costume terms. Caught with a pattern (not a fixed phrase list)
+        # so new combinations of the same adjective/noun families are
+        # also filtered automatically.
+        _kalite_sifat = (
+            r"(?:vibrant|dramatic|ambient|perfect|soft|dynamic|moody|cinematic|vivid|"
+            r"intense|warm|cool|natural|studio|golden|epic|stunning|gorgeous|beautiful|"
+            r"fine|sharp|crisp|rich|deep|subtle|bright|dark|bold|high|low|ultra|extreme|"
+            r"elegant|striking|radiant|lush|smooth|flawless|exquisite|pristine|immersive|"
+            r"ethereal|mystical|magical|otherworldly|intricate|elaborate|ornate|surreal|"
+            r"hyper|super|extra)"
+        )
+        _kalite_isim = (
+            r"(?:colou?rs?|lighting|lights?|details?|detailing|saturation|contrast|"
+            r"shadows?|highlights?|glow(?:ing)?|particles?|composition|quality|"
+            r"resolution|images?|rendering|render|art(?:work)?|atmosphere|ambiance|"
+            r"mood|textures?|tones?|palette|illumination|exposure|focus|clarity|"
+            r"sharpness|realism|aesthetics?|visuals?|graphics?|effects?)"
+        )
+        _genel_kalite_pattern = re.compile(rf"(?i)^{_kalite_sifat}\s+{_kalite_isim}$")
+
         tekrar_sayaci = {}
         toplam_prompt = 0
 
@@ -1462,7 +1492,11 @@ class LoraLibrarianApp(ctk.CTk):
                 if not token or len(token) < 3:
                     continue
                 normalized = token.lower().replace("_", " ")
-                if normalized in stopwords or _hair_eye_pattern.match(normalized):
+                if (
+                    normalized in stopwords
+                    or _hair_eye_pattern.match(normalized)
+                    or _genel_kalite_pattern.match(normalized)
+                ):
                     continue
                 key = normalized
                 if key in gorulenler:

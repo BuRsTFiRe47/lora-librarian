@@ -7,6 +7,11 @@ This file summarizes every change made since v1.4 in one place.
 
 ## 🇹🇷 Türkçe
 
+### 🧹 Jenerik "render kalitesi" kelimelerinin trigger word'e sızması düzeltildi
+- Örnek görsellerin komutlarında geçen `vibrant colors`, `dramatic lighting`, `ambient particles`, `high detail`, `high saturation`, `perfect image` gibi genel görsel-kalite ifadeleri artık trigger word olarak algılanmıyor. Bu tür ifadeler önceden sadece sabit bir listeyle değil, **"sıfat + render-kalitesi ismi" kalıbıyla** (ör. *vivid/soft/dramatic/high* + *colors/lighting/detail/saturation/image* vb.) genel olarak yakalanıyor — yani listede birebir olmayan benzer kombinasyonlar da otomatik filtreleniyor.
+- Bu sayede, örnek görsellerde gerçek bir kostüm kelimesi tekrar etmiyorsa (sadece bu tür jenerik ifadeler tekrarlanıyorsa) çıkarım artık boş dönüyor ve program otomatik olarak model açıklamasındaki gerçek trigger word'e (ör. `Ladd3r_T0p, jersey t-shirt`) düşüyor — önceden bu jenerik ifadeler "bulundu" sayıldığı için açıklama hiç kontrol edilmiyordu.
+- Zaten yeterli (2+ kelimelik) trigger word'ü olan LoRA'lara hâlâ hiç dokunulmuyor; bu değişiklik sadece eksik/tek kelimelik olanları etkiliyor.
+
 ### 🔎 İsim tespiti ve trigger word iyileştirmeleri
 - `IL-vs-HMS2025SPK01_frockpt1_th-3.5` gibi ürün/parti kodu içeren isimler artık "anlamsız" sayılıyor (tek bir kod-benzeri parça tüm ismi işaretler).
 - `Ilus`, `IL`, `pony`, `v10`, `final` gibi taban model/sürüm/eğitim etiketleri bir ismi tek başına "anlamlı" yapmıyor; gerçek bir kelime yoksa isim anlamsız sayılıyor.
@@ -60,6 +65,11 @@ This file summarizes every change made since v1.4 in one place.
 ---
 
 ## 🇬🇧 English
+
+### 🧹 Fixed generic "render-quality" words leaking into trigger words
+- Generic visual-quality phrases found in sample-image prompts, such as `vibrant colors`, `dramatic lighting`, `ambient particles`, `high detail`, `high saturation`, `perfect image`, are no longer picked up as trigger words. These are now caught not just by a fixed phrase list but by a general **"adjective + render-quality noun" pattern** (e.g. *vivid/soft/dramatic/high* + *colors/lighting/detail/saturation/image*, etc.), so similar combinations not explicitly listed are filtered automatically too.
+- As a result, when a LoRA's sample images have no real costume term repeating (only this kind of generic boilerplate), extraction now correctly returns nothing and the app falls through to the real trigger word in the model description (e.g. `Ladd3r_T0p, jersey t-shirt`) instead - previously these generic phrases counted as a "found" result, so the description was never even checked.
+- LoRAs that already have a sufficient (2+ word) trigger are still left completely untouched; this only affects missing/single-word cases.
 
 ### 🔎 Name detection and trigger-word improvements
 - Names containing an internal product/batch code such as `IL-vs-HMS2025SPK01_frockpt1_th-3.5` are now treated as meaningless (a single code-like token flags the whole name).
