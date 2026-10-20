@@ -7,6 +7,11 @@ This file summarizes every change made since v1.4 in one place.
 
 ## 🇹🇷 Türkçe
 
+### 👗 Trigger word çıkarımı kostüm odaklı hâle getirildi
+- `dim light`, `dark room`, `neon lights`, `night`, `bedroom`, `window` gibi **ışık/ortam/sahne** ifadeleri artık trigger word sayılmıyor (baş isme göre genel kalıp: `dimly lit room`, `warm backlight` gibi türevler de yakalanır).
+- Örnek komutlardaki **kıyafet kelimeleri** (dress, bodysuit, boots, gloves, qipao, lingerie…) önceliklendiriliyor; kostüm adayları için tekrar eşiği daha esnek, çünkü aynı kıyafet her görselde farklı kelimelerle anlatılabiliyor. `latex bodysuit` ile `black latex bodysuit` gibi iç içe adaylar tek bırakılıyor.
+- Modelin Civitai etiketleri (`clothing`, `costume`, `outfit`, `cosplay`…) artık kategori olarak kullanılıyor: etiket kostüm modeli diyorsa ve komutlarda hiç kıyafet kelimesi yoksa çıkarım boş dönüyor ve açıklamadaki trigger'a geçiliyor.
+
 ### 🧹 Jenerik "render kalitesi" kelimelerinin trigger word'e sızması düzeltildi
 - Örnek görsellerin komutlarında geçen `vibrant colors`, `dramatic lighting`, `ambient particles`, `high detail`, `high saturation`, `perfect image` gibi genel görsel-kalite ifadeleri artık trigger word olarak algılanmıyor. Bu tür ifadeler önceden sadece sabit bir listeyle değil, **"sıfat + render-kalitesi ismi" kalıbıyla** (ör. *vivid/soft/dramatic/high* + *colors/lighting/detail/saturation/image* vb.) genel olarak yakalanıyor — yani listede birebir olmayan benzer kombinasyonlar da otomatik filtreleniyor.
 - Bu sayede, örnek görsellerde gerçek bir kostüm kelimesi tekrar etmiyorsa (sadece bu tür jenerik ifadeler tekrarlanıyorsa) çıkarım artık boş dönüyor ve program otomatik olarak model açıklamasındaki gerçek trigger word'e (ör. `Ladd3r_T0p, jersey t-shirt`) düşüyor — önceden bu jenerik ifadeler "bulundu" sayıldığı için açıklama hiç kontrol edilmiyordu.
@@ -65,6 +70,11 @@ This file summarizes every change made since v1.4 in one place.
 ---
 
 ## 🇬🇧 English
+
+### 👗 Trigger-word extraction is now costume-focused
+- **Lighting/setting/scene** phrases such as `dim light`, `dark room`, `neon lights`, `night`, `bedroom`, `window` are no longer treated as trigger words (matched by head noun, so variants like `dimly lit room` or `warm backlight` are caught too).
+- **Clothing vocabulary** in sample prompts (dress, bodysuit, boots, gloves, qipao, lingerie…) is now ranked first, with a more tolerant repeat threshold for costume candidates since the same outfit is often described with different words per image. Nested candidates like `latex bodysuit` inside `black latex bodysuit` are collapsed.
+- The model's Civitai tags (`clothing`, `costume`, `outfit`, `cosplay`…) now act as a category signal: if the tags say it's a costume model and the prompts contain no clothing words at all, extraction returns nothing and the description-based fallback takes over.
 
 ### 🧹 Fixed generic "render-quality" words leaking into trigger words
 - Generic visual-quality phrases found in sample-image prompts, such as `vibrant colors`, `dramatic lighting`, `ambient particles`, `high detail`, `high saturation`, `perfect image`, are no longer picked up as trigger words. These are now caught not just by a fixed phrase list but by a general **"adjective + render-quality noun" pattern** (e.g. *vivid/soft/dramatic/high* + *colors/lighting/detail/saturation/image*, etc.), so similar combinations not explicitly listed are filtered automatically too.

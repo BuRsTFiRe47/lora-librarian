@@ -31,7 +31,7 @@ from tkinter import filedialog, messagebox
 from lang import t
 from base_models import normalize_base_model
 
-APP_VERSION = "2.0.1"
+APP_VERSION = "2.0.2"
 API_DOMAIN = "civitai.red"
 
 # By default Civitai's API only returns SFW sample images for a model
@@ -1473,6 +1473,53 @@ class LoraLibrarianApp(ctk.CTk):
         )
         _genel_kalite_pattern = re.compile(rf"(?i)^{_kalite_sifat}\s+{_kalite_isim}$")
 
+        # Lighting / scene / atmosphere phrases ("dim light", "dark room",
+        # "neon lights", "night", "bedroom", "city street", "window"...).
+        # They describe the SETTING of the sample image, never the outfit.
+        # Matched by head noun so any adjective in front is covered
+        # ("dimly lit room", "warm backlight", "soft studio light").
+        _isik_sahne_son = (
+            r"(?:lights?|lighting|lit|lamps?|glow|glowing|shadows?|shadowed|shade|"
+            r"backlight(?:ing)?|rim\s*light|sunlight|sunlit|moonlight|moonlit|candlelight|"
+            r"firelight|neon|darkness|dimness|haze|fog|mist|smoke|sparkles?|"
+            r"room|bedroom|bathroom|kitchen|office|classroom|studio|street|alley|city|"
+            r"cityscape|forest|beach|ocean|sea|sky|clouds?|night|nighttime|daytime|sunset|"
+            r"sunrise|dusk|dawn|evening|morning|window|curtains?|bed|couch|sofa|chair|"
+            r"table|floor|wall|background|scenery|landscape|environment|setting|interior|"
+            r"exterior|atmosphere|ambiance|mood|vibe|shot|view|angle|pose|composition)"
+        )
+        _isik_sahne_pattern = re.compile(rf"(?i)^(?:[\w\-]+\s+){{0,3}}{_isik_sahne_son}$")
+        _isik_sahne_tek = {
+            "night", "dark", "dim", "bright", "dimly lit", "backlit", "shadow", "shadows",
+            "neon", "indoors", "outdoors", "daylight", "twilight", "moody", "cozy", "soft",
+        }
+
+        # Costume vocabulary. A candidate containing one of these words is
+        # treated as costume-relevant and ranked above everything else.
+        _giyim_kelimeleri = re.compile(
+            r"(?i)\b(?:dress(?:es)?|gown|skirt|miniskirt|shirt|t-?shirt|tee|blouse|top|crop\s*top|"
+            r"tank\s*top|camisole|sweater|hoodie|jacket|coat|cardigan|vest|corset|bustier|bodysuit|"
+            r"leotard|swimsuit|bikini|lingerie|bra|panties|thong|garter(?:s|\s*belt)?|stockings?|"
+            r"thighhighs?|thigh\s*highs?|pantyhose|tights|leggings?|socks?|kneehighs?|"
+            r"gloves?|mittens?|boots?|heels?|shoes?|sneakers?|sandals?|pants|jeans|shorts|"
+            r"trousers|kimono|yukata|hanbok|cheongsam|qipao|sari|uniform|sailor|serafuku|"
+            r"maid|nurse|bunny|cosplay|costume|outfit|apron|cape|cloak|robe|armor|armour|"
+            r"suit|tuxedo|necktie|tie|bow\s*tie|ribbon|choker|collar|belt|scarf|hat|cap|"
+            r"beret|crown|tiara|headband|hairband|veil|mask|glasses|earrings?|necklace|"
+            r"bracelet|pendant|jewelry|sleeves?|sleeveless|turtleneck|halter|strapless|"
+            r"backless|pleated|lace|latex|leather|fishnets?|harness|pasties|apparel|"
+            r"clothes|clothing|wear|attire|jersey|bodystocking|chemise|negligee|babydoll|"
+            r"overalls|romper|jumpsuit|poncho|shawl|bandeau|sarong|pareo|wetsuit)\b"
+        )
+        # Civitai model tags that mark the whole model as a costume/clothing
+        # LoRA. When present, sample-prompt extraction runs in strict
+        # costume-only mode (nothing non-clothing slips through).
+        _kostum_etiketleri = {
+            "clothing", "costume", "outfit", "cosplay", "uniform", "dress", "lingerie",
+            "swimsuit", "clothes", "fashion", "garment", "apparel", "bikini", "armor",
+            "kimono", "lolita", "maid", "stockings", "underwear", "top", "shirt",
+        }
+
         tekrar_sayaci = {}
         toplam_prompt = 0
 
@@ -1496,6 +1543,8 @@ class LoraLibrarianApp(ctk.CTk):
                     normalized in stopwords
                     or _hair_eye_pattern.match(normalized)
                     or _genel_kalite_pattern.match(normalized)
+                    or normalized in _isik_sahne_tek
+                    or (_isik_sahne_pattern.match(normalized) and not _giyim_kelimeleri.search(normalized))
                 ):
                     continue
                 key = normalized
@@ -1516,6 +1565,36 @@ class LoraLibrarianApp(ctk.CTk):
                 tags_lower.add(str(name).strip().lower())
 
         esik = max(2, (toplam_prompt // 2) + 1) if toplam_prompt > 1 else 1
+        # Costume candidates: far more tolerant threshold, because the
+        # sample images of one outfit LoRA each describe the outfit in
+        # slightly different words (and a different scene around it).
+        esik_giyim = 1 if toplam_prompt <= 2 else max(2, -(-toplam_prompt // 3))
+
+        kostum_modeli = bool(tags_lower & _kostum_etiketleri)
+        giyim_adaylari = [
+            (v["count"], v["original"]) for key, v in tekrar_sayaci.items()
+            if _giyim_kelimeleri.search(key) and (v["count"] >= esik_giyim or key in tags_lower)
+        ]
+        giyim_adaylari.sort(key=lambda x: -x[0])  # stable: ties keep prompt order
+
+        if giyim_adaylari:
+            # Drop a phrase that's just a piece of another, longer, selected
+            # one ("latex bodysuit" inside "black latex bodysuit").
+            temiz = []
+            for _, w in giyim_adaylari:
+                wl = w.lower()
+                if any(wl != o.lower() and wl in o.lower() for _, o in giyim_adaylari):
+                    continue
+                temiz.append(w)
+            return ", ".join(temiz[:max_kelime])
+
+        # No costume vocabulary found in the prompts.
+        if kostum_modeli:
+            # Civitai itself categorises this as a clothing/costume model,
+            # so anything non-clothing here is scene noise: return nothing
+            # and let the description-based fallback take over.
+            return ""
+
         secilenler = [v["original"] for key, v in tekrar_sayaci.items() if v["count"] >= esik or key in tags_lower]
         return ", ".join(secilenler[:max_kelime])
 
