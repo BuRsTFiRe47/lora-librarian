@@ -9,8 +9,18 @@ permissions:
   contents: write
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            asset: LoRALibrarian-windows.zip
+          - os: macos-latest
+            asset: LoRALibrarian-macos.zip
+          - os: ubuntu-22.04
+            asset: LoRALibrarian-linux.zip
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,37 +36,49 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Build executable
-        # --onedir (not --onefile) and --noupx: onefile's self-extracting
-        # behavior and UPX-compressed binaries are the two biggest
-        # triggers for antivirus false positives (e.g. Windows Defender
-        # flagging PyInstaller builds as "Trojan:Win32/Wacatac.B!ml").
-        # A plain folder build is far less likely to be flagged.
+      - name: Linux system libraries for Qt
+        if: runner.os == 'Linux'
         run: |
-          pyinstaller --noconfirm --onedir --windowed --noupx --name LoRALibrarian main.py
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libgl1 libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libdbus-1-3
 
-      - name: Zip the build folder
-        run: |
-          Compress-Archive -Path dist/LoRALibrarian/* -DestinationPath LoRALibrarian-windows.zip
+      # --onedir + --noupx: onefile's self-extracting behaviour and UPX
+      # compression are the two biggest triggers for antivirus false
+      # positives (e.g. Windows Defender "Trojan:Win32/Wacatac.B!ml").
+      - name: Build executable
+        run: pyinstaller --noconfirm --onedir --windowed --noupx --name LoRALibrarian main.py
+
+      - name: Zip (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path dist/LoRALibrarian/* -DestinationPath ${{ matrix.asset }}
+
+      - name: Zip (macOS)
+        if: runner.os == 'macOS'
+        run: ditto -c -k --keepParent dist/LoRALibrarian.app ${{ matrix.asset }}
+
+      - name: Zip (Linux)
+        if: runner.os == 'Linux'
+        run: cd dist && zip -r ../${{ matrix.asset }} LoRALibrarian
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LoRALibrarian-windows
-          path: LoRALibrarian-windows.zip
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.asset }}
 
   release:
-    needs: build-windows
+    needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download build artifact
+      - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: LoRALibrarian-windows
           path: dist
+          merge-multiple: true
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/LoRALibrarian-windows.zip
+          files: dist/*.zip
           generate_release_notes: true

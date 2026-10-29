@@ -7,10 +7,18 @@ This file summarizes every change made since v1.4 in one place.
 
 ## 🇹🇷 Türkçe
 
+### 🖥️ v2.1.0 — Arayüz PySide6'ya (Qt 6) taşındı: Windows + macOS + Linux
+- customtkinter yerine **PySide6** kullanılıyor; üç işletim sisteminde aynı modern görünüm (siyah/mavi tema, kenar çubuğu, iOS tarzı anahtarlar, koyu/açık tema, 4 dil, klasör geçmişi, log kaydı — hepsi korundu).
+- Kod ikiye ayrıldı: `engine.py` (arayüzden bağımsız tüm iş mantığı: isim tespiti, trigger çıkarımı, Civitai API, taşıma/yeniden adlandırma, kopya bulucu, ayarlar) ve `main.py` (yalnızca arayüz). İş mantığı davranışı değişmedi.
+- Ayar dosyası: Windows'ta eskisi gibi uygulamanın yanında; macOS/Linux'ta kullanıcı yapılandırma klasöründe (yazma izni sorunlarını önlemek için). Mevcut `LL-Settings.json` yanında duruyorsa o kullanılmaya devam eder.
+- GitHub Actions artık üç platform için derliyor ve release'e `LoRALibrarian-windows.zip`, `LoRALibrarian-macos.zip`, `LoRALibrarian-linux.zip` ekliyor.
+- `requirements.txt`: `customtkinter` yerine `PySide6`.
+
 ### 👗 Trigger word çıkarımı kostüm odaklı hâle getirildi
-- `dim light`, `dark room`, `neon lights`, `night`, `bedroom`, `window` gibi **ışık/ortam/sahne** ifadeleri artık trigger word sayılmıyor (baş isme göre genel kalıp: `dimly lit room`, `warm backlight` gibi türevler de yakalanır).
-- Örnek komutlardaki **kıyafet kelimeleri** (dress, bodysuit, boots, gloves, qipao, lingerie…) önceliklendiriliyor; kostüm adayları için tekrar eşiği daha esnek, çünkü aynı kıyafet her görselde farklı kelimelerle anlatılabiliyor. `latex bodysuit` ile `black latex bodysuit` gibi iç içe adaylar tek bırakılıyor.
-- Modelin Civitai etiketleri (`clothing`, `costume`, `outfit`, `cosplay`…) artık kategori olarak kullanılıyor: etiket kostüm modeli diyorsa ve komutlarda hiç kıyafet kelimesi yoksa çıkarım boş dönüyor ve açıklamadaki trigger'a geçiliyor.
+- `dim light`, `dark room`, `neon lights`, `night`, `bedroom`, `window` gibi **ışık/ortam/sahne** ifadeleri artık trigger word sayılmıyor (baş isme göre genel kalıp).
+- Örnek komutlardaki **kıyafet kelimeleri** (dress, bodysuit, boots, gloves, qipao, lingerie…) önceliklendiriliyor; iç içe adaylar (`latex bodysuit` / `black latex bodysuit`) tek bırakılıyor.
+- Modelin Civitai etiketleri (`clothing`, `costume`, `outfit`, `cosplay`…) kategori olarak kullanılıyor: etiket kostüm modeli diyorsa ve komutlarda hiç kıyafet kelimesi yoksa çıkarım boş dönüyor, açıklamadaki trigger'a geçiliyor.
+- Jenerik render-kalitesi ifadeleri (`vibrant colors`, `dramatic lighting`, `high detail`…) genel bir "sıfat + kalite ismi" kalıbıyla filtreleniyor.
 
 ### 🧹 Jenerik "render kalitesi" kelimelerinin trigger word'e sızması düzeltildi
 - Örnek görsellerin komutlarında geçen `vibrant colors`, `dramatic lighting`, `ambient particles`, `high detail`, `high saturation`, `perfect image` gibi genel görsel-kalite ifadeleri artık trigger word olarak algılanmıyor. Bu tür ifadeler önceden sadece sabit bir listeyle değil, **"sıfat + render-kalitesi ismi" kalıbıyla** (ör. *vivid/soft/dramatic/high* + *colors/lighting/detail/saturation/image* vb.) genel olarak yakalanıyor — yani listede birebir olmayan benzer kombinasyonlar da otomatik filtreleniyor.
@@ -71,10 +79,18 @@ This file summarizes every change made since v1.4 in one place.
 
 ## 🇬🇧 English
 
+### 🖥️ v2.1.0 — UI moved to PySide6 (Qt 6): Windows + macOS + Linux
+- **PySide6** replaces customtkinter; the same modern look on all three OSes (black/blue theme, sidebar, iOS-style toggles, dark/light theme, 4 languages, folder history, log saving — all kept).
+- The code is now split in two: `engine.py` (all UI-independent logic: name detection, trigger extraction, Civitai API, moving/renaming, duplicate finder, settings) and `main.py` (UI only). Logic behaviour is unchanged.
+- Settings file: next to the app on Windows as before; in the per-user config folder on macOS/Linux (avoids read-only app folders). An existing `LL-Settings.json` next to the app keeps being used.
+- GitHub Actions now builds for all three platforms and attaches `LoRALibrarian-windows.zip`, `LoRALibrarian-macos.zip`, `LoRALibrarian-linux.zip` to the release.
+- `requirements.txt`: `PySide6` instead of `customtkinter`.
+
 ### 👗 Trigger-word extraction is now costume-focused
-- **Lighting/setting/scene** phrases such as `dim light`, `dark room`, `neon lights`, `night`, `bedroom`, `window` are no longer treated as trigger words (matched by head noun, so variants like `dimly lit room` or `warm backlight` are caught too).
-- **Clothing vocabulary** in sample prompts (dress, bodysuit, boots, gloves, qipao, lingerie…) is now ranked first, with a more tolerant repeat threshold for costume candidates since the same outfit is often described with different words per image. Nested candidates like `latex bodysuit` inside `black latex bodysuit` are collapsed.
-- The model's Civitai tags (`clothing`, `costume`, `outfit`, `cosplay`…) now act as a category signal: if the tags say it's a costume model and the prompts contain no clothing words at all, extraction returns nothing and the description-based fallback takes over.
+- **Lighting/setting/scene** phrases such as `dim light`, `dark room`, `neon lights`, `night`, `bedroom`, `window` are no longer treated as trigger words (head-noun pattern).
+- **Clothing vocabulary** in sample prompts (dress, bodysuit, boots, gloves, qipao, lingerie…) is ranked first; nested candidates (`latex bodysuit` / `black latex bodysuit`) are collapsed.
+- The model's Civitai tags (`clothing`, `costume`, `outfit`, `cosplay`…) act as a category signal: if tags say costume model and the prompts have no clothing words, extraction returns nothing and the description-based fallback takes over.
+- Generic render-quality phrases (`vibrant colors`, `dramatic lighting`, `high detail`…) are filtered by a general "adjective + quality noun" pattern.
 
 ### 🧹 Fixed generic "render-quality" words leaking into trigger words
 - Generic visual-quality phrases found in sample-image prompts, such as `vibrant colors`, `dramatic lighting`, `ambient particles`, `high detail`, `high saturation`, `perfect image`, are no longer picked up as trigger words. These are now caught not just by a fixed phrase list but by a general **"adjective + render-quality noun" pattern** (e.g. *vivid/soft/dramatic/high* + *colors/lighting/detail/saturation/image*, etc.), so similar combinations not explicitly listed are filtered automatically too.
