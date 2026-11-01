@@ -28,7 +28,7 @@ import requests
 from lang import t
 from base_models import normalize_base_model
 
-APP_VERSION = "2.1.0"
+APP_VERSION = "2.2.0"
 API_DOMAIN = "civitai.red"
 
 # By default Civitai's API only returns SFW sample images for a model

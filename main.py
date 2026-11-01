@@ -18,13 +18,12 @@ License: MIT
 import sys
 import time
 
-from PySide6.QtCore import Qt, QObject, Signal, QSize, QRectF
-from PySide6.QtGui import QColor, QPainter, QLinearGradient, QBrush, QPen, QFont
+from PySide6.QtCore import Qt, QObject, Signal
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
-    QLabel, QLineEdit, QPushButton, QCheckBox, QComboBox, QSlider, QPlainTextEdit,
+    QLabel, QLineEdit, QPushButton, QSlider, QPlainTextEdit,
     QProgressBar, QStackedWidget, QScrollArea, QFrame, QFileDialog, QMessageBox,
-    QDialog, QButtonGroup, QSizePolicy,
+    QButtonGroup,
 )
 
 from lang import t
@@ -33,168 +32,7 @@ from engine import (
     Engine, APP_VERSION, LANG_CODES, LANG_LABELS, CONFLICT_CODES, CONFLICT_KEYS,
     CREATOR_CODES, CREATOR_KEYS, RENAME_MODE_CODES, RENAME_MODE_KEYS, messagebox,
 )
-
-# ----------------------------------------------------------------------
-# Theme (black / blue)
-# ----------------------------------------------------------------------
-ACCENT = "#2f7bff"
-ACCENT_HOVER = "#2569e0"
-GRADIENT_STOPS = ["#050814", "#1e3a8a", "#38bdf8"]
-
-ACTION_COLORS = [
-    ("act_cp", "#2b7a0b", "#3e9915"), ("act_lr", "#0b5b7a", "#157199"), ("act_tm", "#b5261a", "#d63424"),
-    ("act_rn", "#7a4a0b", "#996015"), ("act_dup", "#9333ea", "#7c3aed"),
-]
-
-PALETTES = {
-    "dark": {
-        "bg": "#05070c", "header": "#0a0e16", "card": "#0d1119", "hover": "#131a26",
-        "text": "#e6ebf5", "side_text": "#a8b3c4", "border": "#1c2432", "log_bg": "#04060a",
-        "muted": "#7d8aa0", "input": "#0a0e16", "btn_border": "#2a3547",
-    },
-    "light": {
-        "bg": "#f1f4f9", "header": "#ffffff", "card": "#ffffff", "hover": "#dbe3f1",
-        "text": "#16202f", "side_text": "#31435c", "border": "#dde3ee", "log_bg": "#eaeef5",
-        "muted": "#5c6b81", "input": "#ffffff", "btn_border": "#ffffff",
-    },
-}
-
-
-def build_qss(theme):
-    p = PALETTES.get(theme, PALETTES["dark"])
-    action_css = "\n".join(
-        f'QPushButton#{i} {{ background: {c}; }} QPushButton#{i}:hover {{ background: {h}; }} '
-        f'QPushButton#{i}:disabled {{ background: {p["hover"]}; color: {p["muted"]}; }}'
-        for i, c, h in ACTION_COLORS
-    )
-    return f"""
-    QWidget {{ color: {p['text']}; font-size: 13px; }}
-    QMainWindow, QWidget#root {{ background: {p['bg']}; }}
-    QScrollArea {{ border: none; background: transparent; }}
-    QScrollArea > QWidget > QWidget {{ background: transparent; }}
-    QStackedWidget {{ background: transparent; }}
-    QWidget#page {{ background: transparent; }}
-
-    QFrame#header {{ background: {p['header']}; border: none; }}
-    QFrame#card {{ background: {p['card']}; border: 1px solid {p['border']}; border-radius: 14px; }}
-    QFrame#card QLabel {{ background: transparent; }}
-
-    QLabel {{ background: transparent; }}
-    QLabel#muted {{ color: {p['muted']}; font-size: 12px; }}
-    QLabel#title {{ font-size: 18px; font-weight: 700; }}
-    QLabel#version {{ color: {p['muted']}; font-size: 11px; }}
-    QLabel#bold {{ font-weight: 700; }}
-    QLabel#percent {{ color: {ACCENT}; font-size: 16px; font-weight: 700; }}
-    QLabel#status {{ font-weight: 700; }}
-
-    QLineEdit, QPlainTextEdit, QComboBox {{
-        background: {p['input']}; border: 1px solid {p['border']}; border-radius: 8px; padding: 7px 10px;
-        selection-background-color: {ACCENT}; selection-color: white;
-    }}
-    QLineEdit:focus, QPlainTextEdit:focus, QComboBox:focus {{ border: 1px solid {ACCENT}; }}
-    QLineEdit:disabled, QPlainTextEdit:disabled {{ color: {p['muted']}; }}
-    QPlainTextEdit#log {{
-        background: {p['log_bg']}; color: {ACCENT}; font-family: Consolas, Menlo, "DejaVu Sans Mono", monospace;
-        font-size: 12px; border: 1px solid {p['border']};
-    }}
-
-    QComboBox {{ padding-right: 28px; min-height: 20px; background: {ACCENT}; border: none; color: white; font-weight: 600; }}
-    QComboBox:hover {{ background: {ACCENT_HOVER}; }}
-    QComboBox::drop-down {{ border: none; width: 24px; }}
-    QComboBox QAbstractItemView {{
-        background: {p['card']}; color: {p['text']}; border: 1px solid {p['border']};
-        selection-background-color: {ACCENT}; selection-color: white; outline: none;
-    }}
-
-    QPushButton {{
-        background: transparent; border: 1px solid {p['border']}; border-radius: 12px; padding: 7px 14px;
-        color: {p['side_text']};
-    }}
-    QPushButton:hover {{ background: {p['hover']}; }}
-    QPushButton:disabled {{ color: {p['muted']}; }}
-
-    QPushButton#nav {{ text-align: left; border: none; padding: 11px 14px; border-radius: 12px; color: {p['side_text']}; font-size: 13px; }}
-    QPushButton#nav:hover {{ background: {p['hover']}; }}
-    QPushButton#nav:checked {{ background: {ACCENT}; color: white; font-weight: 600; }}
-
-    QPushButton#seg, QPushButton#segL, QPushButton#segR {{ border: 1px solid {p['border']}; border-radius: 0; padding: 6px 12px; color: {p['side_text']}; margin-left: -1px; }}
-    QPushButton#seg:checked, QPushButton#segL:checked, QPushButton#segR:checked {{ background: {ACCENT}; color: white; border: 1px solid {ACCENT}; }}
-    QPushButton#segL {{ border-top-left-radius: 12px; border-bottom-left-radius: 12px; margin-left: 0; }}
-    QPushButton#segR {{ border-top-right-radius: 12px; border-bottom-right-radius: 12px; }}
-
-    QPushButton#accent {{ background: {ACCENT}; color: white; border: 2px solid {p['btn_border']}; font-weight: 600; }}
-    QPushButton#accent:hover {{ background: {ACCENT_HOVER}; }}
-    QPushButton[role="action"] {{
-        color: white; font-size: 14px; font-weight: 700; border: 2px solid {p['btn_border']};
-        border-radius: 14px; padding: 12px 34px; min-height: 22px;
-    }}
-    {action_css}
-    QPushButton#danger {{ background: #b5261a; color: white; border: none; padding: 5px 10px; }}
-    QPushButton#danger:hover {{ background: #d63424; }}
-    QPushButton#histitem {{ text-align: left; border: none; }}
-
-    QProgressBar {{ background: {p['log_bg']}; border: 1px solid {p['border']}; border-radius: 8px; height: 14px; text-align: center; color: transparent; }}
-    QProgressBar::chunk {{ background: {ACCENT}; border-radius: 7px; }}
-
-    QSlider::groove:horizontal {{ height: 6px; background: {p['border']}; border-radius: 3px; }}
-    QSlider::sub-page:horizontal {{ background: {ACCENT}; border-radius: 3px; }}
-    QSlider::handle:horizontal {{ background: {ACCENT}; width: 16px; height: 16px; margin: -6px 0; border-radius: 8px; }}
-
-    QScrollBar:vertical {{ background: transparent; width: 10px; margin: 0; }}
-    QScrollBar::handle:vertical {{ background: {p['border']}; border-radius: 5px; min-height: 30px; }}
-    QScrollBar::handle:vertical:hover {{ background: {p['muted']}; }}
-    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
-    QDialog {{ background: {p['bg']}; }}
-    QMessageBox {{ background: {p['card']}; }}
-    """
-
-
-class GradientStrip(QWidget):
-    """Thin near-black -> blue -> cyan accent line along the top edge."""
-    def __init__(self):
-        super().__init__()
-        self.setFixedHeight(4)
-
-    def paintEvent(self, _e):
-        g = QLinearGradient(0, 0, self.width(), 0)
-        n = len(GRADIENT_STOPS) - 1
-        for i, c in enumerate(GRADIENT_STOPS):
-            g.setColorAt(i / n, QColor(c))
-        QPainter(self).fillRect(self.rect(), QBrush(g))
-
-
-class Switch(QCheckBox):
-    """iOS-style toggle (pill + knob) with the label to its right."""
-    W, H = 40, 22
-
-    def __init__(self, text=""):
-        super().__init__(text)
-        self.setCursor(Qt.PointingHandCursor)
-        self.setMinimumHeight(30)
-
-    def sizeHint(self):
-        s = super().sizeHint()
-        return QSize(self.W + 12 + self.fontMetrics().horizontalAdvance(self.text()) + 4, max(30, s.height()))
-
-    def hitButton(self, pos):
-        return self.rect().contains(pos)
-
-    def paintEvent(self, _e):
-        p = QPainter(self)
-        p.setRenderHint(QPainter.Antialiasing)
-        y = (self.height() - self.H) / 2
-        track = QRectF(1, y, self.W, self.H)
-        on = self.isChecked()
-        p.setPen(Qt.NoPen)
-        p.setBrush(QColor(ACCENT) if on else QColor(120, 130, 150, 120))
-        p.drawRoundedRect(track, self.H / 2, self.H / 2)
-        d = self.H - 6
-        x = track.right() - d - 3 if on else track.left() + 3
-        p.setBrush(QColor("white"))
-        p.drawEllipse(QRectF(x, y + 3, d, d))
-        p.setPen(QColor(PALETTES[getattr(self.window(), 'eng', None).theme if getattr(self.window(), 'eng', None) else 'dark']['text']))
-        p.drawText(QRectF(self.W + 12, 0, self.width() - self.W - 12, self.height()),
-                   Qt.AlignVCenter | Qt.AlignLeft, self.text())
+from breeze import build_qss, Check, Combo, PathField, plain
 
 
 class Bridge(QObject):
@@ -204,56 +42,6 @@ class Bridge(QObject):
     status = Signal(str)
     busy = Signal(bool)
     message = Signal(str, str, str)
-
-
-class HistoryDialog(QDialog):
-    def __init__(self, win, target_var, target_edit):
-        super().__init__(win)
-        self.win, self.var, self.edit = win, target_var, target_edit
-        self.setWindowTitle(t("history_window_title", win.eng.lang))
-        self.resize(560, 400)
-        self.outer = QVBoxLayout(self)
-        self.outer.setContentsMargins(14, 14, 14, 14)
-        self._fill()
-
-    def _fill(self):
-        while self.outer.count():
-            it = self.outer.takeAt(0)
-            if it.widget():
-                it.widget().deleteLater()
-        eng = self.win.eng
-        if not eng.klasor_gecmisi:
-            lbl = QLabel(t("history_empty", eng.lang))
-            lbl.setObjectName("muted")
-            lbl.setAlignment(Qt.AlignCenter)
-            self.outer.addWidget(lbl)
-            return
-        for yol in list(eng.klasor_gecmisi):
-            row = QFrame()
-            row.setObjectName("card")
-            h = QHBoxLayout(row)
-            h.setContentsMargins(6, 4, 6, 4)
-            b = QPushButton(yol)
-            b.setObjectName("histitem")
-            b.setCursor(Qt.PointingHandCursor)
-            b.clicked.connect(lambda _=False, y=yol: self._pick(y))
-            d = QPushButton("✕")
-            d.setObjectName("danger")
-            d.clicked.connect(lambda _=False, y=yol: self._remove(y))
-            h.addWidget(b, 1)
-            h.addWidget(d)
-            self.outer.addWidget(row)
-        self.outer.addStretch(1)
-
-    def _pick(self, yol):
-        self.edit.setText(yol)
-        self.win.eng._gecmise_ekle(yol)
-        self.accept()
-
-    def _remove(self, yol):
-        if yol in self.win.eng.klasor_gecmisi:
-            self.win.eng.klasor_gecmisi.remove(yol)
-        self._fill()
 
 
 class MainWindow(QMainWindow):
@@ -280,6 +68,7 @@ class MainWindow(QMainWindow):
         self._log_cache = ""
         self.creator_boxes = {}
         self.action_buttons = []
+        self.path_fields = []
 
         geo = getattr(self.eng, "_pending_geometry", None) or "1180x800"
         try:
@@ -319,14 +108,20 @@ class MainWindow(QMainWindow):
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
 
-        outer.addWidget(GradientStrip())
         outer.addWidget(self._build_header())
 
         mid = QHBoxLayout()
-        mid.setContentsMargins(16, 14, 16, 8)
-        mid.setSpacing(12)
+        mid.setContentsMargins(0, 0, 0, 0)
+        mid.setSpacing(0)
         mid.addWidget(self._build_sidebar())
-        mid.addWidget(self._build_pages(), 1)
+        vline = QFrame()
+        vline.setObjectName("vline")
+        mid.addWidget(vline)
+        pages_wrap = QWidget()
+        pw = QVBoxLayout(pages_wrap)
+        pw.setContentsMargins(16, 14, 8, 8)
+        pw.addWidget(self._build_pages())
+        mid.addWidget(pages_wrap, 1)
         outer.addLayout(mid, 5)
         outer.addWidget(self._build_log(), 2)
 
@@ -384,7 +179,7 @@ class MainWindow(QMainWindow):
         h.addLayout(tv)
         h.addStretch(1)
 
-        lbl = QLabel(t("api_key_label", self.lang))
+        lbl = QLabel(plain(t("api_key_label", self.lang)))
         lbl.setObjectName("bold")
         h.addWidget(lbl)
         self.api_edit = QLineEdit(self.eng.api_key.get())
@@ -416,15 +211,15 @@ class MainWindow(QMainWindow):
 
     def _build_sidebar(self):
         side = QWidget()
-        side.setFixedWidth(200)
+        side.setFixedWidth(210)
         v = QVBoxLayout(side)
-        v.setContentsMargins(0, 0, 0, 0)
-        v.setSpacing(6)
+        v.setContentsMargins(0, 10, 0, 0)
+        v.setSpacing(2)
         self.nav_group = QButtonGroup(side)
         self.nav_group.setExclusive(True)
         self.nav_buttons = {}
         for key, label_key in self.NAV:
-            b = QPushButton(t(label_key, self.lang).replace("&", "&&"))
+            b = QPushButton(plain(t(label_key, self.lang)).replace("&", "&&"))
             b.setObjectName("nav")
             b.setCheckable(True)
             b.setCursor(Qt.PointingHandCursor)
@@ -444,6 +239,7 @@ class MainWindow(QMainWindow):
     def _build_pages(self):
         self.stack = QStackedWidget()
         self.action_buttons = []
+        self.path_fields = []
         builders = {"cp": self._page_cp, "lr": self._page_lr, "tm": self._page_tm, "rn": self._page_rn, "dup": self._page_dup}
         for key, _ in self.NAV:
             page = QWidget()
@@ -473,26 +269,15 @@ class MainWindow(QMainWindow):
         return l
 
     def _path_row(self, grid, row, var, label_text):
-        grid.addWidget(self._label(label_text, "bold"), row, 0, 1, 3)
-        edit = QLineEdit(var.get())
-        edit.textChanged.connect(var.set)
-        hist = QPushButton("🕘")
-        hist.setFixedWidth(40)
-        hist.setCursor(Qt.PointingHandCursor)
-        hist.clicked.connect(lambda: HistoryDialog(self, var, edit).exec())
-        browse = QPushButton(t("browse", self.lang))
-        browse.setObjectName("accent")
-        browse.setCursor(Qt.PointingHandCursor)
-
-        def pick():
-            yol = QFileDialog.getExistingDirectory(self, "", edit.text() or "")
-            if yol:
-                edit.setText(yol)
-                self.eng._gecmise_ekle(yol)
-        browse.clicked.connect(pick)
-        grid.addWidget(edit, row + 1, 0)
-        grid.addWidget(hist, row + 1, 1)
-        grid.addWidget(browse, row + 1, 2)
+        grid.addWidget(self._label(label_text, "bold"), row, 0)
+        e = self.eng
+        field = PathField(
+            var.get(), var.set, lambda: e.klasor_gecmisi, e._gecmise_ekle,
+            lambda p: e.klasor_gecmisi.remove(p) if p in e.klasor_gecmisi else None,
+            t("browse", self.lang), t("history_window_title", self.lang), t("history_empty", self.lang),
+        )
+        grid.addWidget(field, row + 1, 0)
+        self.path_fields.append((field, var))
 
     def _path_card(self, lay, var, label_text, var2=None):
         c = self._card()
@@ -505,18 +290,26 @@ class MainWindow(QMainWindow):
             self._path_row(g, 2, var2, t("folder_trash", self.lang))
         lay.addWidget(c)
 
+    def _start(self, mod):
+        """Remember the folders in use (typed paths too), then run."""
+        import os
+        for field, _var in self.path_fields:
+            p = field.text().strip()
+            if p and os.path.isdir(p):
+                self.eng._gecmise_ekle(p)
+        self.eng.baslat_thread(mod)
+
     def _switch(self, text, var):
-        s = Switch(text)
+        s = Check(text)
         s.setChecked(bool(var.get()))
         s.toggled.connect(var.set)
         return s
 
     def _combo(self, display_values, current_display, on_change):
-        cb = QComboBox()
+        cb = Combo()
         cb.addItems(display_values)
         cb.setCurrentIndex(max(0, display_values.index(current_display)) if current_display in display_values else 0)
         cb.currentIndexChanged.connect(on_change)
-        cb.setCursor(Qt.PointingHandCursor)
         cb.setMinimumWidth(190)
         return cb
 
@@ -539,7 +332,7 @@ class MainWindow(QMainWindow):
         b.setObjectName(obj)
         b.setProperty("role", "action")
         b.setCursor(Qt.PointingHandCursor)
-        b.clicked.connect(lambda: self.eng.baslat_thread(mod))
+        b.clicked.connect(lambda: self._start(mod))
         self.action_buttons.append(b)
         row = QHBoxLayout()
         row.addStretch(1)
