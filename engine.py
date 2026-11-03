@@ -28,7 +28,7 @@ import requests
 from lang import t
 from base_models import normalize_base_model
 
-APP_VERSION = "2.2.0"
+APP_VERSION = "2.3.0"
 API_DOMAIN = "civitai.red"
 
 # By default Civitai's API only returns SFW sample images for a model
@@ -834,7 +834,11 @@ class Engine:
                     elif isinstance(tag, dict) and "name" in tag:
                         t_tags_lower.append(str(tag["name"]).lower())
 
-                if "concept" in t_tags_lower or "konsept" in t_tags_lower:
+                # Poses first: pose LoRAs on Civitai are very often tagged
+                # "concept" as well, but they deserve their own folder.
+                if any(x in t_tags_lower for x in ("poses", "pose", "poz", "pozlar")):
+                    t_kategori = t("category_pose", self.lang)
+                elif "concept" in t_tags_lower or "konsept" in t_tags_lower:
                     t_kategori = t("category_concept", self.lang)
                 elif "background" in t_tags_lower or "arkaplan" in t_tags_lower:
                     t_kategori = t("category_background", self.lang)

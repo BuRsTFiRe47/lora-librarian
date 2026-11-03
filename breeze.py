@@ -21,19 +21,19 @@ from PySide6.QtWidgets import (
 # Colours measured from the reference screenshot (Breeze Dark + coral accent)
 PALETTES = {
     "dark": {
-        "bg": "#2c3746", "ctrl": "#323e4f", "ctrl_hover": "#3b4859", "inset": "#252e3a",
-        "border": "#606974", "soft": "#46515f", "track": "#414a58",
-        "text": "#eff0f1", "muted": "#a3acb8", "disabled": "#6f7883",
-        "accent": "#f77067", "accent_hover": "#f98a82", "accent_press": "#e85f55",
-        "accent_dim": "#925357", "danger": "#da4453", "log_bg": "#1f2732", "log_text": "#cfd6de",
-        "on_accent": "#ffffff", "check_box": "#6f7883",
+        "bg": "#181826", "ctrl": "#202133", "ctrl_hover": "#2a2b40", "inset": "#12121d",
+        "border": "#4a4c63", "soft": "#2f3045", "track": "#2c2d40",
+        "text": "#eff0f1", "muted": "#9a9db3", "disabled": "#626479",
+        "accent": "#d94a4f", "accent_hover": "#e45a5e", "accent_press": "#c03d42",
+        "accent_dim": "#7a3a48", "danger": "#c93a4a", "log_bg": "#10101a", "log_text": "#cfd3e0",
+        "on_accent": "#ffffff", "check_box": "#6a6c85",
     },
     "light": {
         "bg": "#eff0f1", "ctrl": "#f7f8f9", "ctrl_hover": "#e4e7ea", "inset": "#fcfcfc",
         "border": "#bdc3c7", "soft": "#d3d7da", "track": "#cdd1d5",
         "text": "#232629", "muted": "#5e6773", "disabled": "#9aa1a8",
-        "accent": "#ec6258", "accent_hover": "#f07268", "accent_press": "#d9524a",
-        "accent_dim": "#f3b4af", "danger": "#da4453", "log_bg": "#f6f7f8", "log_text": "#31373d",
+        "accent": "#d94a4f", "accent_hover": "#e05a5e", "accent_press": "#c63f44",
+        "accent_dim": "#efb0b3", "danger": "#da4453", "log_bg": "#f6f7f8", "log_text": "#31373d",
         "on_accent": "#ffffff", "check_box": "#8a9199",
     },
 }

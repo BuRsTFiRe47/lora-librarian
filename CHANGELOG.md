@@ -7,6 +7,10 @@ This file summarizes every change made since v1.4 in one place.
 
 ## 🇹🇷 Türkçe
 
+### 🧍 v2.3.0 — Poz kategorisi + tema ayarları
+- **Yeni kategori: Poz.** "Kategoriye Göre" seçeneği artık Konsept ve Arkaplan'ın yanında Civitai'de `poses`/`pose` etiketli modelleri de ayrı bir **Poz** klasörüne ayırıyor. Poz LoRA'ları çoğunlukla `concept` etiketini de taşıdığı için Poz kontrolü Konsept'ten önce yapılıyor.
+- Koyu tema zemin rengi `#181826` yapıldı; vurgu (buton) rengi daha koyu ve kırmızıya yakın bir tona çekildi (karanlıkta göz almasın diye). Açık tema vurgusu da aynı tona getirildi.
+
 ### 🎨 v2.2.0 — KDE Breeze Dark esinli yeni tasarım + klasör geçmişi açılır liste
 - Arayüz, paylaşılan görsel (KDE "Application Style" ekranı) ölçülerek yeniden tasarlandı: arduvaz zemin `#2c3746`, kontrol yüzeyi `#323e4f`, ince çerçeve `#606974`, mercan vurgu `#f77067`; düz ve sakin görünüm, gradient şerit kaldırıldı.
 - Kenar çubuğunda tam genişlikte düz mercan "seçili" satır; renkli emoji'ler menüden kaldırıldı (tek renkli, sade görünüm).
@@ -85,6 +89,10 @@ This file summarizes every change made since v1.4 in one place.
 ---
 
 ## 🇬🇧 English
+
+### 🧍 v2.3.0 — Poses category + theme tweaks
+- **New category: Poses.** "By Category" now also moves models tagged `poses`/`pose` on Civitai into a separate **Poses** folder, next to Concept and Background. Pose LoRAs are often tagged `concept` too, so Poses is checked before Concept.
+- Dark theme background is now `#181826`; the accent (button) colour is darker and redder so it isn't glaring in the dark. The light theme accent matches.
 
 ### 🎨 v2.2.0 — KDE Breeze Dark-inspired redesign + folder history dropdown
 - The UI was redesigned from a shared reference screenshot (KDE "Application Style" page) using measured colours: slate background `#2c3746`, control surface `#323e4f`, thin border `#606974`, coral accent `#f77067`; a flat, calm look, gradient strip removed.
