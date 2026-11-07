@@ -12,7 +12,7 @@
 
 ### Özellikler
 
-- **🏰 Checkpoint & 🎨 LoRA Düzenleme** — Modellerinizi taban model ailesine (SDXL, Flux, Flux Krea, Krea, Anima, Pony, Illustrious, NoobAI, Chroma, HiDream, Qwen Image, Wan Video ve daha fazlası), kategoriye (Konsept/Arkaplan/Poz) ve isterseniz yaratıcıya göre otomatik klasörler.
+- **🏰 Checkpoint & 🎨 LoRA Düzenleme** — Modellerinizi taban model ailesine (SDXL, Flux 1/2/3, Flux Krea, Krea, Anima, MOSS Image, Z-Image, Pony, Illustrious, NoobAI, Chroma, HiDream, Qwen Image, Lumina, Wan Video ve daha fazlası), kategoriye (Konsept/Arkaplan/Poz) ve isterseniz yaratıcıya göre otomatik klasörler.
 - **🆕 Yeni teknolojileri tanır** — `baseModel` etiketindeki küçük varyasyonları (ör. "Flux.1 D", "Flux.1 Krea Dev") tek bir temiz aile klasöründe toplayan akıllı bir normalize edici içerir; yeni/az bilinen teknolojiler geldikçe kolayca genişletilebilir (bkz. `base_models.py`).
 - **🧹 Akıllı Temizlik** — Eski sürümleri ve düşük puanlı modelleri otomatik olarak ayrı bir çöp/arşiv klasörüne taşır.
 - **⚙️ Bağımsız Ayar Dosyası** — Ayarlar artık `LL-Settings.json` olarak saklanıyor (Preview Smith ile aynı klasörde çakışmasın diye); önceki `ayarlar.json` varsa ilk açılışta otomatik taşınır.
@@ -55,7 +55,7 @@ Hazır derlemeleri (**Windows / macOS / Linux**) sağdaki **Releases** bölümü
 
 ### Features
 
-- **🏰 Checkpoint & 🎨 LoRA Organizing** — Automatically sorts your models into folders by base-model family (SDXL, Flux, Flux Krea, Krea, Anima, Pony, Illustrious, NoobAI, Chroma, HiDream, Qwen Image, Wan Video, and more), by category (Concept/Background/Poses), and optionally by creator.
+- **🏰 Checkpoint & 🎨 LoRA Organizing** — Automatically sorts your models into folders by base-model family (SDXL, Flux 1/2/3, Flux Krea, Krea, Anima, MOSS Image, Z-Image, Pony, Illustrious, NoobAI, Chroma, HiDream, Qwen Image, Lumina, Wan Video, and more), by category (Concept/Background/Poses), and optionally by creator.
 - **🆕 Recognizes new technologies** — Includes a smart normalizer that groups small variations of the `baseModel` tag (e.g. "Flux.1 D", "Flux.1 Krea Dev") into one clean family folder, and can easily be extended as new/lesser-known technologies appear (see `base_models.py`).
 - **🧹 Smart Cleanup** — Automatically moves outdated versions and low-rated models into a separate trash/archive folder.
 - **⚙️ Standalone Settings File** — Settings are now stored as `LL-Settings.json` (so it doesn't collide with Preview Smith in the same folder); an existing `ayarlar.json` is migrated automatically on first launch.

@@ -7,6 +7,11 @@ This file summarizes every change made since v1.4 in one place.
 
 ## 🇹🇷 Türkçe
 
+### 🧩 v2.4.0 — Yeni taban modeller
+- Taban model tanıma genişletildi: **MOSS Image**, **Z-Image** (Turbo/Base), **Flux 2** ve **Flux 3** (Klein dahil), **Lumina**, **Ernie Image**, **Hunyuan Image**, **PixArt**, **Mochi**, **CogVideoX** artık kendi klasörlerine ayrılıyor.
+- **Flux 1 / Flux 2 / Flux 3 artık ayrı klasörler:** nesiller birbiriyle uyumlu olmadığı için. Daha önce `Flux` klasöründe duran Flux 2 LoRA'ları bir sonraki çalıştırmada `Flux 2` klasörüne taşınır.
+- Tanınmayan yeni bir taban model çıkarsa, Civitai'nin verdiği adla kendi klasörü açılmaya devam eder (kayıp olmaz).
+
 ### 🧍 v2.3.0 — Poz kategorisi + tema ayarları
 - **Yeni kategori: Poz.** "Kategoriye Göre" seçeneği artık Konsept ve Arkaplan'ın yanında Civitai'de `poses`/`pose` etiketli modelleri de ayrı bir **Poz** klasörüne ayırıyor. Poz LoRA'ları çoğunlukla `concept` etiketini de taşıdığı için Poz kontrolü Konsept'ten önce yapılıyor.
 - Koyu tema zemin rengi `#181826` yapıldı; vurgu (buton) rengi daha koyu ve kırmızıya yakın bir tona çekildi (karanlıkta göz almasın diye). Açık tema vurgusu da aynı tona getirildi.
@@ -89,6 +94,11 @@ This file summarizes every change made since v1.4 in one place.
 ---
 
 ## 🇬🇧 English
+
+### 🧩 v2.4.0 — New base models
+- Base-model detection extended: **MOSS Image**, **Z-Image** (Turbo/Base), **Flux 2** and **Flux 3** (incl. Klein), **Lumina**, **Ernie Image**, **Hunyuan Image**, **PixArt**, **Mochi**, **CogVideoX** now get their own folders.
+- **Flux 1 / Flux 2 / Flux 3 are now separate folders**, since the generations aren't cross-compatible. Flux 2 LoRAs previously sitting in `Flux` move to `Flux 2` on the next run.
+- If an unrecognised new base model appears, it still gets its own folder named as Civitai reports it (nothing is lost).
 
 ### 🧍 v2.3.0 — Poses category + theme tweaks
 - **New category: Poses.** "By Category" now also moves models tagged `poses`/`pose` on Civitai into a separate **Poses** folder, next to Concept and Background. Pose LoRAs are often tagged `concept` too, so Poses is checked before Concept.

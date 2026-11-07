@@ -4,8 +4,8 @@ LoRA Librarian - Base Model Normalizer
 Civitai gibi kaynaklardan gelen 'baseModel' etiketi çok sayıda küçük
 varyasyonla gelebilir (ör. 'Flux.1 D', 'Flux.1 S', 'Flux.1 Krea').
 Bu modül bu varyasyonları temiz, tutarlı klasör isimlerinde toplar ve
-yeni/az bilinen teknolojileri (Krea, Anima, Chroma, HiDream, Qwen, Wan,
-Hunyuan vb.) de tanır.
+yeni/az bilinen teknolojileri (Krea, Anima, MOSS Image, Z-Image, Flux 2/3,
+Chroma, HiDream, Qwen, Lumina, Wan, Hunyuan vb.) de tanır.
 
 Sources like Civitai can return many small variations of the
 'baseModel' tag (e.g. 'Flux.1 D', 'Flux.1 S', 'Flux.1 Krea'). This
@@ -20,14 +20,25 @@ import re
 # Sıra önemlidir: daha spesifik kalıplar daha genel olanlardan önce gelmeli.
 _RULES = [
     (r"flux.*krea|krea.*flux", "Flux Krea"),
+    # Flux generations are NOT cross-compatible, so they get separate folders.
+    (r"flux[\s._\-]*3", "Flux 3"),
+    (r"flux[\s._\-]*2", "Flux 2"),
     (r"flux", "Flux"),
+    (r"moss", "MOSS Image"),
+    (r"z[\s._\-]*image", "Z-Image"),
+    (r"lumina", "Lumina"),
+    (r"ernie", "Ernie Image"),
+    (r"pix\s*art", "PixArt"),
     (r"\bkrea\b", "Krea"),
     (r"\banima\b|animagine", "Anima"),
     (r"chroma", "Chroma"),
     (r"hidream", "HiDream"),
     (r"qwen", "Qwen Image"),
     (r"\bwan\b|wan\s*video|wan\s*2", "Wan Video"),
+    (r"hunyuan[\s._\-]*image", "Hunyuan Image"),
     (r"hunyuan", "Hunyuan Video"),
+    (r"mochi", "Mochi"),
+    (r"cogvideo", "CogVideoX"),
     (r"\bltx\b", "LTX Video"),
     (r"cascade", "Stable Cascade"),
     (r"pony", "Pony"),
