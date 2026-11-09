@@ -32,7 +32,7 @@ from engine import (
     Engine, APP_VERSION, LANG_CODES, LANG_LABELS, CONFLICT_CODES, CONFLICT_KEYS,
     CREATOR_CODES, CREATOR_KEYS, RENAME_MODE_CODES, RENAME_MODE_KEYS, messagebox,
 )
-from breeze import build_qss, Check, Combo, PathField, plain
+from breeze import build_qss, Check, Combo, PathField, plain, apply_app_identity
 
 
 class Bridge(QObject):
@@ -534,6 +534,7 @@ class MainWindow(QMainWindow):
 def main():
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
+    apply_app_identity(app, "LoRALibrarian", "LoRA Librarian")
     win = MainWindow()
     win.show()
     sys.exit(app.exec())

@@ -1,5 +1,7 @@
 # 🎨 LoRA Librarian
 
+<p align="center"><img src="assets/icon.png" width="128" alt="LoRA Librarian"></p>
+
 **AI model (Checkpoint / LoRA) kütüphanenizi otomatik olarak düzenleyen, eksik verileri Civitai'den tamamlayan ve kütüphanenizi temiz tutan modern, çift dilli masaüstü uygulaması.**
 
 **A modern, bilingual desktop app that automatically organizes your AI model (Checkpoint / LoRA) library, fills in missing data from Civitai, and keeps your library clean.**

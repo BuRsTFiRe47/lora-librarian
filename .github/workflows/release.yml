@@ -16,10 +16,14 @@ jobs:
         include:
           - os: windows-latest
             asset: LoRALibrarian-windows.zip
+            build_args: --icon assets/icon.ico --version-file version_info.txt
           - os: macos-latest
             asset: LoRALibrarian-macos.zip
+            build_args: --icon assets/icon.icns --osx-bundle-identifier com.burstfire47.loralibrarian
           - os: ubuntu-22.04
             asset: LoRALibrarian-linux.zip
+            build_args: ""
+
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -46,7 +50,7 @@ jobs:
       # compression are the two biggest triggers for antivirus false
       # positives (e.g. Windows Defender "Trojan:Win32/Wacatac.B!ml").
       - name: Build executable
-        run: pyinstaller --noconfirm --onedir --windowed --noupx --name LoRALibrarian main.py
+        run: pyinstaller --noconfirm --onedir --windowed --noupx --name LoRALibrarian ${{ matrix.build_args }} main.py
 
       - name: Zip (Windows)
         if: runner.os == 'Windows'

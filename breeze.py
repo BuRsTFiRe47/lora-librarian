@@ -337,3 +337,31 @@ class PathField(QWidget):
             wa.setDefaultWidget(row)
             menu.addAction(wa)
         menu.exec(self.edit.mapToGlobal(QPoint(0, self.edit.height() + 2)))
+
+
+def apply_app_identity(app, app_id, display_name):
+    """App/taskbar identity: window icon (embedded PNG, no data files needed),
+    and on Windows a dedicated AppUserModelID so the taskbar shows OUR icon
+    and groups windows under this app instead of 'python'."""
+    import base64, sys
+    from PySide6.QtGui import QIcon, QPixmap
+    app.setApplicationName(display_name)
+    app.setApplicationDisplayName(display_name)
+    try:
+        app.setDesktopFileName(app_id)
+    except Exception:
+        pass
+    if sys.platform.startswith("win"):
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(f"BuRsTFiRe47.{app_id}")
+        except Exception:
+            pass
+    try:
+        from icon_data import ICON_PNG_B64
+        pm = QPixmap()
+        pm.loadFromData(base64.b64decode(ICON_PNG_B64), "PNG")
+        if not pm.isNull():
+            app.setWindowIcon(QIcon(pm))
+    except Exception:
+        pass

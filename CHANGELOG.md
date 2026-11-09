@@ -7,6 +7,12 @@ This file summarizes every change made since v1.4 in one place.
 
 ## 🇹🇷 Türkçe
 
+### 🖼️ v2.4.1 — Uygulama ikonu ve sürüm bilgisi
+- LoRA Librarian için özel **uygulama ikonu** tasarlandı (pencere, görev çubuğu, masaüstü/Dock). Windows için `.ico`, macOS için `.icns`, Linux için `.png`; `assets/` klasöründe. İkon ayrıca koda gömülü olduğu için pencere ikonu her platformda ek dosya gerektirmeden görünür.
+- Windows'ta görev çubuğunda artık "python" yerine uygulamanın kendi ikonu ve adı görünür (özel AppUserModelID).
+- Windows `.exe` dosyasına **sürüm bilgisi** eklendi (ürün adı, yayıncı, sürüm, lisans): Dosya Özellikleri ve Görev Yöneticisi'nde "bilinmeyen program" gibi görünmez.
+- İkonlar `tools/make_icons.py` ile yeniden üretilebilir.
+
 ### 🧩 v2.4.0 — Yeni taban modeller
 - Taban model tanıma genişletildi: **MOSS Image**, **Z-Image** (Turbo/Base), **Flux 2** ve **Flux 3** (Klein dahil), **Lumina**, **Ernie Image**, **Hunyuan Image**, **PixArt**, **Mochi**, **CogVideoX** artık kendi klasörlerine ayrılıyor.
 - **Flux 1 / Flux 2 / Flux 3 artık ayrı klasörler:** nesiller birbiriyle uyumlu olmadığı için. Daha önce `Flux` klasöründe duran Flux 2 LoRA'ları bir sonraki çalıştırmada `Flux 2` klasörüne taşınır.
@@ -94,6 +100,12 @@ This file summarizes every change made since v1.4 in one place.
 ---
 
 ## 🇬🇧 English
+
+### 🖼️ v2.4.1 — App icon and version info
+- A custom **app icon** was designed for LoRA Librarian (window, taskbar, desktop/Dock): `.ico` for Windows, `.icns` for macOS, `.png` for Linux, in `assets/`. The icon is also embedded in the code, so the window icon shows on every platform without extra files.
+- On Windows the taskbar now shows the app's own icon and name instead of "python" (dedicated AppUserModelID).
+- Windows `.exe` now carries **version info** (product name, publisher, version, licence), so it no longer looks like an "unknown program" in File Properties and Task Manager.
+- Icons can be regenerated with `tools/make_icons.py`.
 
 ### 🧩 v2.4.0 — New base models
 - Base-model detection extended: **MOSS Image**, **Z-Image** (Turbo/Base), **Flux 2** and **Flux 3** (incl. Klein), **Lumina**, **Ernie Image**, **Hunyuan Image**, **PixArt**, **Mochi**, **CogVideoX** now get their own folders.

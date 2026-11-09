@@ -1,0 +1,22 @@
+# UTF-8
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(2, 4, 1, 0), prodvers=(2, 4, 1, 0),
+    mask=0x3f, flags=0x0, OS=0x40004, fileType=0x1, subtype=0x0, date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo([
+      StringTable('040904B0', [
+        StringStruct('CompanyName', 'BuRsTFiRe47'),
+        StringStruct('FileDescription', 'LoRA Librarian'),
+        StringStruct('FileVersion', '2.4.1.0'),
+        StringStruct('InternalName', 'LoRALibrarian'),
+        StringStruct('LegalCopyright', 'MIT License - github.com/BuRsTFiRe47'),
+        StringStruct('OriginalFilename', 'LoRALibrarian.exe'),
+        StringStruct('ProductName', 'LoRA Librarian'),
+        StringStruct('ProductVersion', '2.4.1.0')
+      ])
+    ]),
+    VarFileInfo([VarStruct('Translation', [1033, 1200])])
+  ]
+)
