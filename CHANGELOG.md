@@ -7,6 +7,9 @@ This file summarizes every change made since v1.4 in one place.
 
 ## 🇹🇷 Türkçe
 
+### ⏱️ v2.5.0 — En yeniden eskiye işleme
+- Tüm işlem modları (sınıflandırma ve isim/trigger doldurma) artık dosyaları **değişiklik tarihine göre en yeniden en eskiye** işler. Yeni indirdiklerin ilk sırada olur; büyük kütüphanede tamamını beklemeden durdurabilirsin.
+
 ### 🖼️ v2.4.1 — Uygulama ikonu ve sürüm bilgisi
 - LoRA Librarian için özel **uygulama ikonu** tasarlandı (pencere, görev çubuğu, masaüstü/Dock). Windows için `.ico`, macOS için `.icns`, Linux için `.png`; `assets/` klasöründe. İkon ayrıca koda gömülü olduğu için pencere ikonu her platformda ek dosya gerektirmeden görünür.
 - Windows'ta görev çubuğunda artık "python" yerine uygulamanın kendi ikonu ve adı görünür (özel AppUserModelID).
@@ -100,6 +103,9 @@ This file summarizes every change made since v1.4 in one place.
 ---
 
 ## 🇬🇧 English
+
+### ⏱️ v2.5.0 — Newest-first processing
+- Organizing and rename/trigger filling now process files **by modification date, newest to oldest**. Fresh downloads come first, so on a large library you can stop early without scanning everything.
 
 ### 🖼️ v2.4.1 — App icon and version info
 - A custom **app icon** was designed for LoRA Librarian (window, taskbar, desktop/Dock): `.ico` for Windows, `.icns` for macOS, `.png` for Linux, in `assets/`. The icon is also embedded in the code, so the window icon shows on every platform without extra files.

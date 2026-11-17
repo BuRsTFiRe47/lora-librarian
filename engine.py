@@ -28,7 +28,7 @@ import requests
 from lang import t
 from base_models import normalize_base_model
 
-APP_VERSION = "2.4.1"
+APP_VERSION = "2.5.0"
 API_DOMAIN = "civitai.red"
 
 # By default Civitai's API only returns SFW sample images for a model
@@ -201,6 +201,17 @@ def is_meaningless_name(name: str) -> bool:
     if not any(_gercek_kelime_mi(tok) for tok in re.split(r"[ _\-.]+", name)):
         return True
     return False
+
+def _yeniden_eskiye_sirala(liste):
+    """(root, file) listesini dosya tarihine göre en yeniden eskiye sıralar.
+    Kütüphanenin tamamı taranmadan, yeni indirilenler önce işlenir."""
+    def _mt(item):
+        try:
+            return os.path.getmtime(os.path.join(item[0], item[1]))
+        except OSError:
+            return 0
+    return sorted(liste, key=_mt, reverse=True)
+
 
 def app_dir():
     if getattr(sys, "frozen", False):
@@ -740,6 +751,7 @@ class Engine:
             for file in files:
                 if file.endswith((".safetensors", ".ckpt")):
                     islem_listesi.append((root, file))
+        islem_listesi = _yeniden_eskiye_sirala(islem_listesi)
 
         toplam_model = len(islem_listesi)
         self.log_yaz(t("log_total_models", self.lang, count=toplam_model))
@@ -1391,6 +1403,7 @@ class Engine:
             for file in files:
                 if file.endswith((".safetensors", ".ckpt", ".pt")):
                     islem_listesi.append((root, file))
+        islem_listesi = _yeniden_eskiye_sirala(islem_listesi)
 
         toplam_model = len(islem_listesi)
         self.log_yaz(t("log_total_models", self.lang, count=toplam_model))
