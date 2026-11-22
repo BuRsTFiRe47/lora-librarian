@@ -7,6 +7,12 @@ This file summarizes every change made since v1.4 in one place.
 
 ## 🇹🇷 Türkçe
 
+### 🔗 v2.6.0 — Model başlığı ve açıklamasıyla ilişkili trigger çıkarımı
+- Trigger kelimeleri artık **model başlığı ve açıklamasıyla ilişkilendirilerek** seçiliyor. Örnek prompt'lardan gelen bir ifade başlıkla (güçlü) veya açıklamayla (zayıf) ortak anlamlı bir kelime paylaşıyorsa öne çıkar; renk, sürüm, taban model adı gibi dolgu kelimeler ilişki sayılmaz.
+- **Poz ve konsept LoRA'larına artık kıyafet trigger'ı eklenmiyor.** Bu modellerde örnek görsellerdeki kıyafet tesadüfidir; kıyafet ifadesi yalnızca model başlığında geçiyorsa tutulur ("Pantyhose Pose" gibi). Açıklamadan gelen listelerde de aynı eleme yapılır.
+- Poz/konsept modellerinde başlıkla ilişkili ifadeler ("arched back pose" gibi) artık "poz/sahne" filtresine takılıp elenmiyor.
+- Kıyafet LoRA'larında, başlık/açıklamayla ilişkili kıyafet ifadeleri varsa ilgisiz (tesadüfi) olanlar elenir; hiçbiri ilişkili değilse eski davranış korunur.
+
 ### ⏱️ v2.5.0 — En yeniden eskiye işleme
 - Tüm işlem modları (sınıflandırma ve isim/trigger doldurma) artık dosyaları **değişiklik tarihine göre en yeniden en eskiye** işler. Yeni indirdiklerin ilk sırada olur; büyük kütüphanede tamamını beklemeden durdurabilirsin.
 
@@ -103,6 +109,12 @@ This file summarizes every change made since v1.4 in one place.
 ---
 
 ## 🇬🇧 English
+
+### 🔗 v2.6.0 — Trigger extraction tied to model title & description
+- Trigger words are now chosen **in relation to the model title and description**. A phrase from the sample prompts ranks higher if it shares a meaningful word with the title (strong) or description (weak); filler such as colours, version tags and base-model names never counts as a relation.
+- **Pose and concept LoRAs no longer get clothing triggers.** In those models the clothes in sample images are incidental; a clothing phrase is kept only if the title itself names it (e.g. "Pantyhose Pose"). The same filter applies to lists parsed from the description.
+- Title-related phrases on pose/concept models (e.g. "arched back pose") are no longer discarded by the pose/scene filter.
+- On outfit LoRAs, if some clothing phrases relate to the title/description the unrelated (incidental) ones are dropped; if none relate, the old behaviour is kept.
 
 ### ⏱️ v2.5.0 — Newest-first processing
 - Organizing and rename/trigger filling now process files **by modification date, newest to oldest**. Fresh downloads come first, so on a large library you can stop early without scanning everything.

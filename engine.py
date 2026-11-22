@@ -28,7 +28,7 @@ import requests
 from lang import t
 from base_models import normalize_base_model
 
-APP_VERSION = "2.5.0"
+APP_VERSION = "2.6.0"
 API_DOMAIN = "civitai.red"
 
 # By default Civitai's API only returns SFW sample images for a model
@@ -978,7 +978,115 @@ class Engine:
 
         return yeniden_adlandirilan
 
-    def _trigger_kelimeleri_cikar(self, images, tags=None, max_kelime=6):
+    # ------------------------------------------------------------------
+    # Model-type / title / description relation helpers
+    # ------------------------------------------------------------------
+    # Costume vocabulary (shared by the sample-prompt and description paths).
+    _GIYIM_RE = re.compile(
+            r"(?i)\b(?:dress(?:es)?|gown|skirt|miniskirt|shirt|t-?shirt|tee|blouse|top|crop\s*top|"
+            r"tank\s*top|camisole|sweater|hoodie|jacket|coat|cardigan|vest|corset|bustier|bodysuit|"
+            r"leotard|swimsuit|bikini|lingerie|bra|panties|thong|garter(?:s|\s*belt)?|stockings?|"
+            r"thighhighs?|thigh\s*highs?|pantyhose|tights|leggings?|socks?|kneehighs?|"
+            r"gloves?|mittens?|boots?|heels?|shoes?|sneakers?|sandals?|pants|jeans|shorts|"
+            r"trousers|kimono|yukata|hanbok|cheongsam|qipao|sari|uniform|sailor|serafuku|"
+            r"maid|nurse|bunny|cosplay|costume|outfit|apron|cape|cloak|robe|armor|armour|"
+            r"suit|tuxedo|necktie|tie|bow\s*tie|ribbon|choker|collar|belt|scarf|hat|cap|"
+            r"beret|crown|tiara|headband|hairband|veil|mask|glasses|earrings?|necklace|"
+            r"bracelet|pendant|jewelry|sleeves?|sleeveless|turtleneck|halter|strapless|"
+            r"backless|pleated|lace|latex|leather|fishnets?|harness|pasties|apparel|"
+            r"clothes|clothing|wear|attire|jersey|bodystocking|chemise|negligee|babydoll|"
+            r"overalls|romper|jumpsuit|poncho|shawl|bandeau|sarong|pareo|wetsuit)\b"
+    )
+    _POZ_ETIKETLERI = {"poses", "pose", "poz", "pozlar", "position", "positions", "posture"}
+    _KONSEPT_ETIKETLERI = {"concept", "konsept", "action", "sex position"}
+    _KOSTUM_ETIKETLERI = {
+        "clothing", "costume", "outfit", "cosplay", "uniform", "dress", "lingerie",
+        "swimsuit", "clothes", "fashion", "garment", "apparel", "bikini", "armor",
+        "kimono", "lolita", "maid", "stockings", "underwear", "top", "shirt",
+    }
+    _POZ_BASLIK_RE = re.compile(r"(?i)\b(?:poses?|positions?|posture|stance)\b")
+    # Words that say nothing about WHAT a model is (so they never count as a
+    # title/description "relation"): version tags, base-model names, filler.
+    _GENEL_KELIMELER = {
+        "lora", "lyco", "model", "models", "version", "style", "styles", "the", "and", "for",
+        "with", "from", "this", "that", "your", "you", "are", "was", "can", "use", "used",
+        "pony", "sdxl", "xl", "illustrious", "noobai", "flux", "sd", "checkpoint", "base",
+        "trigger", "word", "words", "prompt", "weight", "strength", "recommended", "image",
+        "images", "anime", "realistic", "character", "concept", "pose", "outfit", "costume",
+        "clothing", "clothes", "girl", "girls", "boy", "boys", "woman", "man", "new", "high",
+        "low", "best", "good", "great", "nice", "please", "thank", "thanks", "like", "also",
+        "work", "works", "make", "made", "will", "have", "has", "can", "may", "some", "any",
+    }
+    _RENK_KELIMELERI = {
+        "black", "white", "red", "blue", "green", "yellow", "pink", "purple", "orange", "brown",
+        "grey", "gray", "silver", "gold", "golden", "blonde", "blond", "violet", "dark", "light",
+    }
+
+    @staticmethod
+    def _html_duz_metin(h):
+        if not h:
+            return ""
+        h = re.sub(r"(?i)<br\s*/?>|</p>|</li>|</div>|</h[1-6]>", "\n", h)
+        h = re.sub(r"<[^>]+>", " ", h)
+        return html.unescape(h)
+
+    @classmethod
+    def _anlamli_kelimeler(cls, metin):
+        """Meaningful lowercase word stems of a text (no filler / colours /
+        base-model names). Used to relate prompt phrases to the model's
+        title and description."""
+        out = set()
+        for w in re.findall(r"[a-z]+", (metin or "").lower()):
+            if len(w) < 3 or w in cls._GENEL_KELIMELER or w in cls._RENK_KELIMELERI:
+                continue
+            if len(w) > 3 and w.endswith("s") and not w.endswith("ss"):
+                w = w[:-1]
+            if w in cls._GENEL_KELIMELER:
+                continue
+            out.add(w)
+        return out
+
+    @staticmethod
+    def _etiket_adlari(tags):
+        out = set()
+        for tag in (tags or []):
+            name = tag if isinstance(tag, str) else (tag.get("name") if isinstance(tag, dict) else None)
+            if name:
+                out.add(str(name).strip().lower())
+        return out
+
+    @classmethod
+    def _model_turu(cls, model_adi, tags):
+        """'poz_konsept' (pose/concept LoRA: outfit words in the sample
+        prompts are incidental), 'kostum' (outfit LoRA) or 'diger'.
+        Pose beats clothing, matching the category-sorting order, because
+        Civitai pose/concept LoRAs very often also carry clothing tags."""
+        tl = cls._etiket_adlari(tags)
+        baslik = model_adi or ""
+        poz = bool(tl & cls._POZ_ETIKETLERI) or bool(cls._POZ_BASLIK_RE.search(baslik))
+        kostum = bool(tl & cls._KOSTUM_ETIKETLERI) or bool(cls._GIYIM_RE.search(baslik))
+        konsept = bool(tl & cls._KONSEPT_ETIKETLERI)
+        if poz:
+            return "poz_konsept"
+        if kostum:
+            return "kostum"
+        if konsept:
+            return "poz_konsept"
+        return "diger"
+
+    @classmethod
+    def _kiyafet_ogelerini_ele(cls, kelimeler, model_adi):
+        """For pose/concept models: drop clothing phrases from a trigger list
+        unless the model's own title mentions them."""
+        baslik_kel = cls._anlamli_kelimeler(model_adi)
+        kalan = []
+        for k in [x.strip() for x in (kelimeler or "").split(",") if x.strip()]:
+            if cls._GIYIM_RE.search(k) and not (cls._anlamli_kelimeler(k) & baslik_kel):
+                continue
+            kalan.append(k)
+        return ", ".join(kalan)
+
+    def _trigger_kelimeleri_cikar(self, images, tags=None, max_kelime=6, model_adi="", aciklama=""):
         """Heuristic keyword extraction from sample-image generation
         prompts: keep only tokens that repeat across multiple sample
         prompts and aren't generic SD boilerplate OR generic character
@@ -1074,32 +1182,10 @@ class Engine:
             "neon", "indoors", "outdoors", "daylight", "twilight", "moody", "cozy", "soft",
         }
 
-        # Costume vocabulary. A candidate containing one of these words is
-        # treated as costume-relevant and ranked above everything else.
-        _giyim_kelimeleri = re.compile(
-            r"(?i)\b(?:dress(?:es)?|gown|skirt|miniskirt|shirt|t-?shirt|tee|blouse|top|crop\s*top|"
-            r"tank\s*top|camisole|sweater|hoodie|jacket|coat|cardigan|vest|corset|bustier|bodysuit|"
-            r"leotard|swimsuit|bikini|lingerie|bra|panties|thong|garter(?:s|\s*belt)?|stockings?|"
-            r"thighhighs?|thigh\s*highs?|pantyhose|tights|leggings?|socks?|kneehighs?|"
-            r"gloves?|mittens?|boots?|heels?|shoes?|sneakers?|sandals?|pants|jeans|shorts|"
-            r"trousers|kimono|yukata|hanbok|cheongsam|qipao|sari|uniform|sailor|serafuku|"
-            r"maid|nurse|bunny|cosplay|costume|outfit|apron|cape|cloak|robe|armor|armour|"
-            r"suit|tuxedo|necktie|tie|bow\s*tie|ribbon|choker|collar|belt|scarf|hat|cap|"
-            r"beret|crown|tiara|headband|hairband|veil|mask|glasses|earrings?|necklace|"
-            r"bracelet|pendant|jewelry|sleeves?|sleeveless|turtleneck|halter|strapless|"
-            r"backless|pleated|lace|latex|leather|fishnets?|harness|pasties|apparel|"
-            r"clothes|clothing|wear|attire|jersey|bodystocking|chemise|negligee|babydoll|"
-            r"overalls|romper|jumpsuit|poncho|shawl|bandeau|sarong|pareo|wetsuit)\b"
-        )
-        # Civitai model tags that mark the whole model as a costume/clothing
-        # LoRA. When present, sample-prompt extraction runs in strict
-        # costume-only mode (nothing non-clothing slips through).
-        _kostum_etiketleri = {
-            "clothing", "costume", "outfit", "cosplay", "uniform", "dress", "lingerie",
-            "swimsuit", "clothes", "fashion", "garment", "apparel", "bikini", "armor",
-            "kimono", "lolita", "maid", "stockings", "underwear", "top", "shirt",
-        }
+        _giyim_kelimeleri = self._GIYIM_RE
+        _kostum_etiketleri = self._KOSTUM_ETIKETLERI
 
+        baslik_kel = self._anlamli_kelimeler(model_adi)
         tekrar_sayaci = {}
         toplam_prompt = 0
 
@@ -1124,7 +1210,8 @@ class Engine:
                     or _hair_eye_pattern.match(normalized)
                     or _genel_kalite_pattern.match(normalized)
                     or normalized in _isik_sahne_tek
-                    or (_isik_sahne_pattern.match(normalized) and not _giyim_kelimeleri.search(normalized))
+                    or (_isik_sahne_pattern.match(normalized) and not _giyim_kelimeleri.search(normalized)
+                        and not (self._anlamli_kelimeler(normalized) & baslik_kel))
                 ):
                     continue
                 key = normalized
@@ -1151,11 +1238,55 @@ class Engine:
         esik_giyim = 1 if toplam_prompt <= 2 else max(2, -(-toplam_prompt // 3))
 
         kostum_modeli = bool(tags_lower & _kostum_etiketleri)
+
+        # Relate each phrase to the model's TITLE (strong) and DESCRIPTION
+        # (weak): 2 = shares a meaningful word with the title, 1 = with the
+        # description, 0 = unrelated (incidental prompt content).
+        aciklama_kel = self._anlamli_kelimeler(self._html_duz_metin(aciklama))
+
+        def _iliski(key):
+            w = self._anlamli_kelimeler(key)
+            return 2 if (w & baslik_kel) else (1 if (w & aciklama_kel) else 0)
+
+        tur = self._model_turu(model_adi, tags)
+
+        if tur == "poz_konsept":
+            # Pose / concept LoRA: what the sample images WEAR is incidental.
+            # Keep only phrases tied to the title/description, never clothing
+            # unless the title itself names it.
+            adaylar = []
+            for key, v in tekrar_sayaci.items():
+                il = _iliski(key)
+                if _giyim_kelimeleri.search(key) and il < 2:
+                    continue
+                if il == 2 and v["count"] >= 1:
+                    pass
+                elif il == 1 and v["count"] >= esik_giyim:
+                    pass
+                elif key in tags_lower and v["count"] >= 1:
+                    pass
+                else:
+                    continue
+                adaylar.append((il, v["count"], v["original"]))
+            adaylar.sort(key=lambda x: (-x[0], -x[1]))
+            temiz = []
+            for _, _, w in adaylar:
+                wl = w.lower()
+                if any(wl != o.lower() and wl in o.lower() for _, _, o in adaylar):
+                    continue
+                temiz.append(w)
+            return ", ".join(temiz[:max_kelime])
+
         giyim_adaylari = [
-            (v["count"], v["original"]) for key, v in tekrar_sayaci.items()
+            (v["count"], v["original"], _iliski(key)) for key, v in tekrar_sayaci.items()
             if _giyim_kelimeleri.search(key) and (v["count"] >= esik_giyim or key in tags_lower)
         ]
-        giyim_adaylari.sort(key=lambda x: -x[0])  # stable: ties keep prompt order
+        # If at least one outfit phrase is tied to the title/description,
+        # the unrelated ones are incidental clothing from the sample images.
+        if any(a[2] > 0 for a in giyim_adaylari):
+            giyim_adaylari = [a for a in giyim_adaylari if a[2] > 0]
+        giyim_adaylari.sort(key=lambda x: (-x[2], -x[0]))  # stable: ties keep prompt order
+        giyim_adaylari = [(a[0], a[1]) for a in giyim_adaylari]
 
         if giyim_adaylari:
             # Drop a phrase that's just a piece of another, longer, selected
@@ -1505,6 +1636,8 @@ class Engine:
                                 if not tags:
                                     tags = model_ust_veri.get("tags") or []
                                 aciklama_metni = model_ust_veri.get("description", "")
+                                if not model_adi:
+                                    model_adi = model_ust_veri.get("name") or model_adi
                             else:
                                 self.log_yaz(t("log_api_failed_detail", self.lang, status=r2.status_code))
                         except Exception as e:
@@ -1533,10 +1666,12 @@ class Engine:
                         # Nothing usable saved yet - run the full
                         # extraction pipeline (sample images -> tag
                         # boost -> description).
-                        kelimeler = self._trigger_kelimeleri_cikar(images, tags=tags) if config.get("samples") else ""
+                        kelimeler = self._trigger_kelimeleri_cikar(images, tags=tags, model_adi=model_adi or "", aciklama=aciklama_metni) if config.get("samples") else ""
                         kaynak_aciklama = False
                         if not kelimeler and aciklama_metni:
                             kelimeler = self._aciklamadan_trigger_cikar(aciklama_metni)
+                            if kelimeler and self._model_turu(model_adi, tags) == "poz_konsept":
+                                kelimeler = self._kiyafet_ogelerini_ele(kelimeler, model_adi)
                             kaynak_aciklama = bool(kelimeler)
 
                         if kelimeler:
