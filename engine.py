@@ -28,7 +28,7 @@ import requests
 from lang import t
 from base_models import normalize_base_model
 
-APP_VERSION = "2.6.0"
+APP_VERSION = "2.7.0"
 API_DOMAIN = "civitai.red"
 
 # By default Civitai's API only returns SFW sample images for a model
@@ -343,6 +343,7 @@ class Engine:
         self.btn_cp = self.btn_lr = self.btn_tm = self.btn_rn = self.btn_dup = _BusyShim(self)
 
         self.lang = "tr"
+        self.durdurma = threading.Event()  # set by the UI's Stop button
         self.islem_devam_ediyor = False
         self.hash_cache = self._hash_cache_yukle()
         self.session = requests.Session()
@@ -679,6 +680,22 @@ class Engine:
     # ------------------------------------------------------------------
     # Main engine
     # ------------------------------------------------------------------
+    def durdur(self):
+        """Ask the running job to stop after the current file."""
+        if self.islem_devam_ediyor:
+            self.durdurma.set()
+            self.on_status(f'{t("status_label_prefix", self.lang)} {t("status_stopping", self.lang)}')
+
+    def _durduruldu_mu(self):
+        if self.durdurma.is_set():
+            self.log_yaz(t("log_stopped", self.lang))
+            return True
+        return False
+
+    def _bitis_durumu(self):
+        key = "status_stopped" if self.durdurma.is_set() else "status_done"
+        return f'{t("status_label_prefix", self.lang)} {t(key, self.lang)}'
+
     def baslat_thread(self, mod):
         if mod == "checkpoint":
             kaynak = self.cp_kaynak.get()
@@ -713,6 +730,7 @@ class Engine:
 
         if self.islem_devam_ediyor:
             return
+        self.durdurma.clear()
         self.btn_cp.configure(state="disabled")
         self.btn_lr.configure(state="disabled")
         self.btn_tm.configure(state="disabled")
@@ -760,6 +778,8 @@ class Engine:
         unknown_creator = t("unknown_creator", self.lang)
 
         for index, (root, file) in enumerate(islem_listesi):
+            if self._durduruldu_mu():
+                break
             dosya_yolu = os.path.join(root, file)
             if not os.path.exists(dosya_yolu):
                 continue
@@ -911,7 +931,7 @@ class Engine:
             self.progress_bar.set(ilerleme_orani)
             self.lbl_yuzde.configure(text=f"%{int(ilerleme_orani * 100)}")
             if api_lazim:
-                time.sleep(0.5)
+                self.durdurma.wait(0.5)
 
         self.bos_klasorleri_temizle(kaynak)
         self._hash_cache_kaydet()
@@ -924,7 +944,7 @@ class Engine:
         )
 
         self.log_yaz(f'{t("log_summary_title", self.lang)}\n{ozet_metni}')
-        self.lbl_durum.configure(text=f'{t("status_label_prefix", self.lang)} {t("status_done", self.lang)}')
+        self.lbl_durum.configure(text=self._bitis_durumu())
         self.islem_devam_ediyor = False
         self.btn_cp.configure(state="normal")
         self.btn_lr.configure(state="normal")
@@ -1540,6 +1560,8 @@ class Engine:
         self.log_yaz(t("log_total_models", self.lang, count=toplam_model))
 
         for index, (root, file) in enumerate(islem_listesi):
+            if self._durduruldu_mu():
+                break
             dosya_yolu = os.path.join(root, file)
             if not os.path.exists(dosya_yolu):
                 continue
@@ -1692,7 +1714,7 @@ class Engine:
             ilerleme_orani = (index + 1) / toplam_model if toplam_model > 0 else 1
             self.progress_bar.set(ilerleme_orani)
             self.lbl_yuzde.configure(text=f"%{int(ilerleme_orani * 100)}")
-            time.sleep(0.5)
+            self.durdurma.wait(0.5)
 
         self._hash_cache_kaydet()
 
@@ -1703,7 +1725,7 @@ class Engine:
         )
 
         self.log_yaz(f'{t("log_summary_title", self.lang)}\n{ozet_metni}')
-        self.lbl_durum.configure(text=f'{t("status_label_prefix", self.lang)} {t("status_done", self.lang)}')
+        self.lbl_durum.configure(text=self._bitis_durumu())
         self.islem_devam_ediyor = False
         self.btn_cp.configure(state="normal")
         self.btn_lr.configure(state="normal")
@@ -1757,6 +1779,9 @@ class Engine:
         self.log_yaz(t("log_dup_hashing", self.lang))
         hash_gruplari = {}
         for index, (root, file) in enumerate(dosya_listesi):
+            if self._durduruldu_mu():
+                self._motor_bitir_duplicate()
+                return
             yol = os.path.join(root, file)
             try:
                 h = self.get_hash(yol)
@@ -1775,6 +1800,8 @@ class Engine:
 
         toplam_grup = len(kopya_gruplari)
         for g_index, (h, dosyalar) in enumerate(kopya_gruplari.items()):
+            if self._durduruldu_mu():
+                break
             dosyalar_sirali = sorted(dosyalar, key=lambda item: self._kopya_tutma_skoru(item[0], item[1], kaynak))
             tutulan = dosyalar_sirali[0]
             kopyalar = dosyalar_sirali[1:]
@@ -1800,7 +1827,7 @@ class Engine:
             empty=self.istatistik_bos_klasor,
         )
         self.log_yaz(f'{t("log_summary_title", self.lang)}\n{ozet_metni}')
-        self.lbl_durum.configure(text=f'{t("status_label_prefix", self.lang)} {t("status_done", self.lang)}')
+        self.lbl_durum.configure(text=self._bitis_durumu())
         self.islem_devam_ediyor = False
         self.btn_cp.configure(state="normal")
         self.btn_lr.configure(state="normal")

@@ -7,6 +7,11 @@ This file summarizes every change made since v1.4 in one place.
 
 ## 🇹🇷 Türkçe
 
+### ⏹ v2.7.0 — Durdur düğmesi
+- Log kartına **Durdur** düğmesi eklendi. İşlem sırasında aktif olur; basınca geçerli dosya bitince işlem durur, o ana kadar yapılanlar korunur ve butonlar tekrar açılır. Artık programı kapatıp açmak gerekmez.
+- Tüm modlarda çalışır (Checkpoint/LoRA düzenleme, Akıllı Temizlik, İsim & Trigger, Kopya Bulucu). Kopya Bulucu'da tarama aşamasında durdurulursa hiçbir dosya taşınmaz.
+- Dört dilde (TR/EN/JA/ZH) arayüz metni eklendi.
+
 ### 🔗 v2.6.0 — Model başlığı ve açıklamasıyla ilişkili trigger çıkarımı
 - Trigger kelimeleri artık **model başlığı ve açıklamasıyla ilişkilendirilerek** seçiliyor. Örnek prompt'lardan gelen bir ifade başlıkla (güçlü) veya açıklamayla (zayıf) ortak anlamlı bir kelime paylaşıyorsa öne çıkar; renk, sürüm, taban model adı gibi dolgu kelimeler ilişki sayılmaz.
 - **Poz ve konsept LoRA'larına artık kıyafet trigger'ı eklenmiyor.** Bu modellerde örnek görsellerdeki kıyafet tesadüfidir; kıyafet ifadesi yalnızca model başlığında geçiyorsa tutulur ("Pantyhose Pose" gibi). Açıklamadan gelen listelerde de aynı eleme yapılır.
@@ -109,6 +114,11 @@ This file summarizes every change made since v1.4 in one place.
 ---
 
 ## 🇬🇧 English
+
+### ⏹ v2.7.0 — Stop button
+- A **Stop** button was added to the log card. It is enabled while a job runs; pressing it stops after the current file, keeps everything done so far and re-enables the action buttons. No need to close and reopen the app.
+- Works in every mode (Checkpoint/LoRA organizing, Smart Clean, Rename & Trigger, Duplicate Finder). In Duplicate Finder, stopping during the scan moves nothing.
+- UI strings added in TR/EN/JA/ZH.
 
 ### 🔗 v2.6.0 — Trigger extraction tied to model title & description
 - Trigger words are now chosen **in relation to the model title and description**. A phrase from the sample prompts ranks higher if it shares a meaningful word with the title (strong) or description (weak); filler such as colours, version tags and base-model names never counts as a relation.

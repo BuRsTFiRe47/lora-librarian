@@ -127,6 +127,10 @@ TRANSLATIONS = {
     "btn_save_log": {"tr": "💾 Logu Kaydet", "en": "💾 Save Log", "ja": "💾 ログを保存", "zh": "💾 保存日志"},
     "log_save_failed": {"tr": "Log dosyası kaydedilemedi.", "en": "Could not save the log file.", "ja": "ログファイルを保存できませんでした。", "zh": "无法保存日志文件。"},
     "status_running": {"tr": "İşlem Yapılıyor...", "en": "Processing...", "ja": "処理中...", "zh": "处理中..."},
+    "btn_stop": {"tr": "⏹ Durdur", "en": "⏹ Stop", "ja": "⏹ 停止", "zh": "⏹ 停止"},
+    "status_stopping": {"tr": "Durduruluyor… (geçerli dosya bitince)", "en": "Stopping… (after the current file)", "ja": "停止中…（現在のファイルの後）", "zh": "正在停止…（当前文件完成后）"},
+    "status_stopped": {"tr": "Durduruldu.", "en": "Stopped.", "ja": "停止しました。", "zh": "已停止。"},
+    "log_stopped": {"tr": "⏹ İşlem kullanıcı tarafından durduruldu. Şimdiye kadar yapılanlar korundu.", "en": "⏹ Stopped by the user. Everything done so far has been kept.", "ja": "⏹ ユーザーにより停止されました。ここまでの処理結果は保持されます。", "zh": "⏹ 已被用户停止。此前完成的操作均已保留。"},
     "status_done": {"tr": "Tamamlandı!", "en": "Completed!", "ja": "完了しました！", "zh": "已完成！"},
     "log_ready": {
         "tr": "Sistem Hazır. Ayarlarınız otomatik olarak hatırlanır.\nKonsept, Arkaplan ve Poz ayırma modülü devrede.",

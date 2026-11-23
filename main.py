@@ -469,6 +469,11 @@ class MainWindow(QMainWindow):
         self.lbl_status = self._label(f'{t("status_label_prefix", self.lang)} {t("status_waiting", self.lang)}', "status")
         top.addWidget(self.lbl_status)
         top.addStretch(1)
+        self.btn_stop = QPushButton(t("btn_stop", self.lang))
+        self.btn_stop.setCursor(Qt.PointingHandCursor)
+        self.btn_stop.setEnabled(False)
+        self.btn_stop.clicked.connect(self._stop)
+        top.addWidget(self.btn_stop)
         save = QPushButton(t("btn_save_log", self.lang))
         save.setCursor(Qt.PointingHandCursor)
         save.clicked.connect(self.save_log)
@@ -506,6 +511,12 @@ class MainWindow(QMainWindow):
     def _set_busy(self, busy):
         for b in self.action_buttons:
             b.setEnabled(not busy)
+        if hasattr(self, "btn_stop"):
+            self.btn_stop.setEnabled(bool(busy))
+
+    def _stop(self):
+        self.btn_stop.setEnabled(False)
+        self.eng.durdur()
 
     def _show_message(self, kind, title, text):
         (QMessageBox.warning if kind == "warning" else QMessageBox.information)(self, title, text)
